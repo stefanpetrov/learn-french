@@ -666,6 +666,7 @@ footer, .tip {
 }
 .choice::after {
   content: '→';
+  content: '→' / '';
   position: absolute;
   right: 1rem;
   top: 50%;
@@ -678,4 +679,5 @@ footer, .tip {
 .choice-title { font-weight: 600; }
 .choice.primary .choice-title { color: var(--ink); }
 .choice-desc { font-size: .86rem; color: var(--muted); }
-.choice-sub { justify-self: start; font-size: .88rem; margin: -.15rem 0 .2rem 1rem; min-height: 32px; }
+.choice-sub { justify-self: start; font-size: .88rem; margin: -.3rem 0 0 1rem; min-height: 44px; }
+.qtop > span:last-child, .qtop .src { white-space: nowrap; }

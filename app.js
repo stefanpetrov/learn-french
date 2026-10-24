@@ -395,7 +395,7 @@ VIEWS.forEach(v => $('tab-' + v).addEventListener('click', () => showView(v)));
 
 /* ---------- answer checking ---------- */
 function norm(s) {
-  return s.normalize('NFC').toLowerCase().replace(/[’‘`´]/g, "'").replace(/\s+/g, ' ').trim();
+  return s.normalize('NFC').toLowerCase().replace(/[’‘`´]/g, "'").replace(/\s+/g, ' ').replace(/' /g, "'").trim();
 }
 function strip(s) {
   return norm(s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/œ/g, 'oe');
@@ -462,42 +462,42 @@ $('c-reset').addEventListener('click', () => {
   startCards();
 });
 
-/* Pick a deck: least known cards first (random within the same level),
-   one card per verb before any verb repeats. Verbs in skipInf are left out
-   when there are other verbs to choose from. */
+/* Pick a deck of cs.count cards: least known first (random within the same
+   level) and one card per verb before any verb repeats. Verbs in skipInf
+   (the round just played) are used only when no other cards are left. */
 function pickDeck(skipInf) {
-  let pool = cardPool();
-  if (skipInf && skipInf.size) {
-    const rest = pool.filter(c => !skipInf.has(c.inf));
-    if (rest.length) pool = rest;
-  }
-  const ranked = shuffle(pool)
+  const skip = skipInf || new Set();
+  const ranked = shuffle(cardPool())
     .map(c => [c, boxes[c.key] || 0])
     .sort((a, b) => a[1] - b[1])
     .map(x => x[0]);
   const deck = [];
-  const used = new Set();
-  for (const c of ranked) {
-    if (deck.length >= cs.count) break;
-    if (used.has(c.inf)) continue;
-    used.add(c.inf);
-    deck.push(c);
-  }
-  for (const c of ranked) {
-    if (deck.length >= cs.count) break;
-    if (!deck.includes(c)) deck.push(c);
-  }
+  [ranked.filter(c => !skip.has(c.inf)), ranked.filter(c => skip.has(c.inf))].forEach(tier => {
+    const used = new Set();
+    for (const c of tier) {
+      if (deck.length >= cs.count) break;
+      if (used.has(c.inf)) continue;
+      used.add(c.inf);
+      deck.push(c);
+    }
+    for (const c of tier) {
+      if (deck.length >= cs.count) break;
+      if (!deck.includes(c)) deck.push(c);
+    }
+  });
   return shuffle(deck);
 }
-/* verbs outside skipInf that the current settings can still offer */
-function otherVerbCount(skipInf) {
-  return new Set(cardPool().filter(c => !skipInf.has(c.inf)).map(c => c.inf)).size;
-}
 
-function startCards(list, skipInf) {
+const cardsWord = k => k + ' ' + (k === 1 ? 'карта' : 'карти');
+const questionsWord = k => k + ' ' + (k === 1 ? 'въпрос' : 'въпроса');
+
+/* keepInf: verbs of the round this one replays, so "new words" stays new
+   after "same cards" or "only the hard ones" */
+function startCards(list, keepInf) {
   stopAll();
-  const deck = list || pickDeck(skipInf);
+  const deck = list || pickDeck();
   cs.deck = deck.slice();
+  cs.roundInf = new Set([...(keepInf || []), ...deck.map(c => c.inf)]);
   cs.queue = deck.slice();
   cs.total = deck.length;
   cs.done = 0;
@@ -648,31 +648,57 @@ function renderCardsEnd() {
     document.createTextNode('Научени карти: ' + knownCount(pool) + ' от ' + pool.length + '. Една карта е научена, когато я знаеш ' + KNOWN_BOX + ' пъти подред.'));
   box.appendChild(msg);
 
-  // what next: test these words, replay the same cards, or a new set of words
+  // what next: test these words, replay the same cards, or new words
   const deck = cs.deck.slice();
   const missed = cs.missedCards.slice();
-  const deckInf = new Set(deck.map(c => c.inf));
-  const others = otherVerbCount(deckInf);
+  const roundInf = new Set(cs.roundInf);
   const word = cs.kind === 'cj' ? 'глаголи' : 'думи';
+  const one = n === 1;
 
   box.appendChild(el('h3', 'next-title', 'Какво следва?'));
   const choices = el('div', 'choices');
-  const testBtn = choiceButton('Тест с тези ' + word,
-    n + ' ' + (n === 1 ? 'въпрос' : 'въпроса') + ' за картите, които току-що мина',
+
+  const testBtn = choiceButton(
+    one ? (cs.kind === 'cj' ? 'Тест с този глагол' : 'Тест с тази дума') : 'Тест с тези ' + word,
+    (cs.kind === 'cj' ? 'Пишеш същите форми' : 'Виждаш значението и пишеш глагола на френски') + ' · ' + questionsWord(n),
     () => startTestFromCards(deck), true);
-  const againBtn = choiceButton('Пак същите карти',
-    'Изиграй отново същите ' + n + ' карти',
-    () => startCards(shuffle(deck.slice())));
-  const newBtn = choiceButton('Нова група ' + word,
-    others ? cs.count + ' карти с други ' + word
-      : 'Няма други ' + word + ' с тези настройки, затова ще са същите в нов ред. Добави групи от Настройки.',
-    () => startCards(null, deckInf));
+  const againBtn = choiceButton(
+    one ? 'Пак същата карта' : 'Пак същите карти',
+    one ? 'Изиграй я отново' : 'Изиграй отново същите ' + n + ' карти',
+    () => startCards(shuffle(deck.slice()), roundInf));
   choices.append(testBtn, againBtn);
-  if (missed.length) {
+  if (missed.length && missed.length < n) {
     const hard = el('button', 'linkbtn choice-sub', 'Само трудните (' + missed.length + ')');
     hard.type = 'button';
-    hard.addEventListener('click', () => startCards(shuffle(missed.slice())));
+    hard.addEventListener('click', () => startCards(shuffle(missed.slice()), roundInf));
     choices.appendChild(hard);
+  }
+
+  // the next deck is picked now, so the description says exactly what it holds
+  const next = pickDeck(roundInf);
+  const newCards = next.filter(c => !roundInf.has(c.inf)).length;
+  const deckKeys = new Set(deck.map(c => c.key));
+  const otherForms = next.filter(c => !deckKeys.has(c.key)).length;
+  let newBtn;
+  if (newCards === next.length) {
+    newBtn = choiceButton('Нови ' + word, cardsWord(next.length) + ' с други ' + word, () => startCards(next));
+  } else if (newCards > 0) {
+    newBtn = choiceButton('Нови ' + word,
+      cardsWord(next.length) + ': ' + newCards + ' с нови ' + word + ', останалите от досегашните',
+      () => startCards(next));
+  } else if (otherForms > 0) {
+    newBtn = choiceButton('Нови карти',
+      'Няма други глаголи с тези настройки, затова ще са други форми на същите. Добави групи от Настройки.',
+      () => startCards(next));
+  } else {
+    newBtn = choiceButton('Още ' + word,
+      'Няма други ' + word + ' с тези настройки. Отвори Настройки и добави групи.',
+      () => {
+        const set = $('c-settings');
+        set.open = true;
+        set.querySelector('summary').focus({ preventScroll: true });
+        set.scrollIntoView({ block: 'nearest' });
+      });
   }
   choices.appendChild(newBtn);
   box.appendChild(choices);
@@ -728,9 +754,14 @@ function conjQ(inf, p, tense) {
   const f = forms(inf, tense)[p];
   return { type: 'conj', inf, p, tense, form: f, pron: f.pron, answer: formAnswer(f), full: formText(f), speak: formText(f) };
 }
-/* vocabulary question: Bulgarian meaning -> French infinitive */
+/* vocabulary question: Bulgarian meaning -> French infinitive.
+   Brackets with French in them are hidden, so plaire's hint does not give the answer away. */
+const baseMeaning = bg => bg.replace(/\s*\([^)]*\)/g, '').trim();
 function wordQ(inf) {
-  return { type: 'word', inf, tense: null, answer: inf, speak: inf, bg: VERB[inf].bg };
+  const bg = VERB[inf].bg.replace(/\s*\([^)]*[a-z][^)]*\)/gi, '').trim();
+  // other verbs with the same meaning count too (живея: vivre, habiter)
+  const same = Object.keys(VERB).filter(x => x !== inf && baseMeaning(VERB[x].bg) === baseMeaning(VERB[inf].bg));
+  return { type: 'word', inf, tense: null, answer: inf, also: same, speak: inf, bg };
 }
 function sentQ(row) {
   const [tense, inf, s, a, bg] = row;
@@ -772,6 +803,13 @@ function renderSettings() {
   $('set-tenses').replaceChildren(...setToggles(TENSE_ITEMS, st.tenses, settingsChanged));
   $('set-groups').replaceChildren(...setToggles(GROUP_ITEMS, st.groups, settingsChanged));
   $('set-count').replaceChildren(...COUNTS.map(n => toggleBtn(String(n), st.count === n, () => { st.count = n; settingsChanged(); })));
+  renderSum();
+}
+function renderSum() {
+  if (st.fromCards) {
+    $('set-sum').textContent = 'По картите · ' + questionsWord(st.qs.length);
+    return;
+  }
   const parts = [MODES.find(x => x[0] === st.mode)[1], st.count + ' въпроса', [...st.tenses].map(t => TENSE[t].label).join(', ')];
   const gl = groupsLabel(st.groups);
   if (gl) parts.push(gl);
@@ -788,6 +826,7 @@ function startRound(qs, focus, fromCards) {
   stopAll();
   st.fromCards = !!fromCards;
   st.qs = qs || buildRound();
+  renderSum();
   st.i = 0;
   st.score = 0;
   st.wrong = [];
@@ -801,7 +840,9 @@ function renderQ(focus) {
 
   const top = el('div', 'qtop');
   const scoreEl = el('span', null, 'Верни: ' + st.score);
-  top.append(el('span', null, 'Въпрос ' + (st.i + 1) + ' от ' + st.qs.length + (st.fromCards ? ' · от картите' : '')), scoreEl);
+  const lead = el('span', null, 'Въпрос ' + (st.i + 1) + ' от ' + st.qs.length);
+  if (st.fromCards) lead.append(' ', el('span', 'src', '· по картите'));
+  top.append(lead, scoreEl);
   const prog = el('div', 'progress');
   const bar = el('i');
   bar.style.width = (st.i / st.qs.length * 100) + '%';
@@ -810,7 +851,7 @@ function renderQ(focus) {
 
   const tl = q.tense ? TENSE[q.tense].label : '';
   card.appendChild(el('p', 'eyebrow kind', q.type === 'conj' ? 'Спрегни в ' + tl
-    : q.type === 'sent' ? 'Попълни глагола в ' + tl : 'Как е на френски?'));
+    : q.type === 'sent' ? 'Попълни глагола в ' + tl : 'Напиши инфинитива на френски'));
 
   const input = el('input', 'ans' + (q.tense !== 'pr' ? ' wide' : ''));
   input.id = 'answer';
@@ -908,7 +949,7 @@ function check(ui, gaveUp) {
 
   // a reflexive verb also counts without its pronoun: appeler for s'appeler
   const base = q.type === 'conj' ? [q.answer, q.full]
-    : q.type === 'word' ? [q.answer, bareInf(q.answer)] : [q.answer];
+    : q.type === 'word' ? [q.answer, ...q.also].flatMap(x => [x, bareInf(x)]) : [q.answer];
   const cands = base.concat(...base.map(variants));
   const exact = !gaveUp && cands.some(c => norm(c) === norm(val));
   const near = !gaveUp && !exact && cands.some(c => strip(c) === strip(val));
@@ -1002,16 +1043,21 @@ function renderResult() {
     retry.addEventListener('click', () => startRound(shuffle(again.slice()), true, fromCards));
     actions.appendChild(retry);
   }
-  if (st.fromCards) {
-    const back = el('button', 'btn', 'Към картите');
-    back.type = 'button';
-    back.addEventListener('click', () => { showView('cards'); cardsRoot.scrollIntoView({ block: 'nearest' }); });
-    actions.appendChild(back);
-  }
-  const fresh = el('button', 'btn primary', 'Нов тест');
+  const fresh = el('button', st.fromCards ? 'btn' : 'btn primary', 'Нов тест');
   fresh.type = 'button';
   fresh.addEventListener('click', () => startRound(null, true));
   actions.appendChild(fresh);
+  if (st.fromCards) {
+    const back = el('button', 'btn primary', 'Към картите');
+    back.type = 'button';
+    back.addEventListener('click', () => {
+      showView('cards');
+      const target = cardsRoot.querySelector('.choice') || (cardUI && (cs.flipped ? cardUI.known : cardUI.flip)) || $('tab-cards');
+      target.focus({ preventScroll: true });
+      cardsRoot.scrollIntoView({ block: 'nearest' });
+    });
+    actions.appendChild(back);
+  }
   card.appendChild(actions);
 
   quiz.replaceChildren(card);
