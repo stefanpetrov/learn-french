@@ -134,18 +134,35 @@ function dkCompare(expected, given) {
   };
   const COST = [0, 1, 100], GAP = 100;
   const K = ek.map(t => words.map(w => kind(t.key, w)));
+  // "grand parents" for grands-parents: an expected hyphen/apostrophe word may take as many
+  // typed words as it has parts, as one mistake, when at least one part is spelled right
+  const parts = ek.map(t => /['-]/.test(t.key) ? t.key.split(/['-]/).filter(Boolean).map(x => strip(x)) : null);
+  const spanOk = (i, j, r) => parts[i] && j + r <= m && words.slice(j, j + r).some(w => parts[i].includes(strip(dkSepless(w.key))));
   const D = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+  const span = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
   for (let i = n; i >= 0; i--) {
     for (let j = m; j >= 0; j--) {
-      if (i === n) D[i][j] = (m - j) * GAP;
-      else if (j === m) D[i][j] = (n - i) * GAP;
-      else D[i][j] = Math.min(COST[K[i][j]] + D[i + 1][j + 1], GAP + D[i + 1][j], GAP + D[i][j + 1]);
+      if (i === n) { D[i][j] = (m - j) * GAP; continue; }
+      if (j === m) { D[i][j] = (n - i) * GAP; continue; }
+      let best = Math.min(COST[K[i][j]] + D[i + 1][j + 1], GAP + D[i + 1][j], GAP + D[i][j + 1]);
+      if (parts[i]) {
+        for (let r = 2; r <= parts[i].length; r++) {
+          if (spanOk(i, j, r) && GAP + D[i + 1][j + r] < best) { best = GAP + D[i + 1][j + r]; span[i][j] = r; }
+        }
+      }
+      D[i][j] = best;
     }
   }
   const wst = words.map(() => null);
   let bad = 0, i = 0, j = 0;
   while (i < n || j < m) {
-    if (i < n && j < m && D[i][j] === COST[K[i][j]] + D[i + 1][j + 1]) {
+    if (i < n && j < m && span[i][j] && D[i][j] === GAP + D[i + 1][j + span[i][j]]) {
+      ek[i].st = 'bad';
+      for (let r = 0; r < span[i][j]; r++) wst[j + r] = 'wrong';
+      bad++;
+      const r = span[i][j];
+      i++; j += r;
+    } else if (i < n && j < m && D[i][j] === COST[K[i][j]] + D[i + 1][j + 1]) {
       const k = K[i][j];
       ek[i].st = k === 0 ? 'ok' : k === 1 ? 'near' : 'bad';
       if (k === 2) { wst[j] = 'wrong'; bad++; }

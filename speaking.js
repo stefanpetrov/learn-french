@@ -73,8 +73,10 @@ function spMatch(expected, heard) {
   const exp = expected.split(/\s+/).filter(Boolean).map(show => ({ show, key: norm(show).replace(DK_PUNCT, '') }));
   const ek = exp.filter(t => t.key);
   const words = dkMergeSpaced(ek.map(t => t.key), dkWords(heard).words);
-  const a = ek.map(t => soundKey(t.key));
-  const b = words.map(w => soundKey(SP_ALIAS[w.key] || w.key));
+  const wk = words.map(w => SP_ALIAS[w.key] || w.key);
+  // apostrophes are not heard, so "j ai" = "j'ai"
+  const a = spLiaison(ek.map(t => t.key), ek.map(t => soundKey(dkSepless(t.key))));
+  const b = spLiaison(wk, wk.map(w => soundKey(dkSepless(w))));
   const n = a.length, m = b.length;
   const L = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
   for (let i = n - 1; i >= 0; i--) {
@@ -89,8 +91,11 @@ function spMatch(expected, heard) {
     else if (L[i + 1][j] >= L[i][j + 1]) i++;
     else j++;
   }
-  return { exp, ok: ek.filter(t => t.st === 'ok').length, total: ek.length, heard };
+  return { exp, ok: ek.filter(t => t.st === 'ok').length, total: ek.length, heard, extra: Math.max(0, m - ek.filter(t => t.st === 'ok').length) };
 }
+// ils aiment (/ilzɛm/) ≠ il aime: before a vowel or a mute h the liaison z is heard
+const spLiaison = (ws, keys) => keys.map((key, k) =>
+  /^(ils|elles)$/.test(ws[k]) && /^[aeiouyhàâéèêëîïôûœ]/.test(ws[k + 1] || '') ? key + 'z' : key);
 
 /* ---------- microphone ---------- */
 const SP_ERRORS = {
@@ -108,18 +113,20 @@ const SP_MEDIA_ERRORS = { NotAllowedError: 'not-allowed', SecurityError: 'not-al
 function spMessage(ui, key) {
   ui.fb.replaceChildren(el('p', 'verdict bad', SP_ERRORS[key] || SP_ERRORS.other));
   ui.fb.hidden = false;
+  ui.actions.scrollIntoView({ block: 'nearest' });
 }
-function spSetListening(ui, on) {
+function spSetListening(ui, on, checking) {
   if (!ui) return;
-  ui.mic.classList.toggle('listening', on);
-  ui.mic.querySelector('.lbl').textContent = on ? 'Говори сега…' : 'Кажи';
-  ui.mic.setAttribute('aria-label', on ? 'Спри слушането' : 'Кажи на глас');
+  ui.mic.classList.toggle('listening', on && !checking);
+  ui.mic.querySelector('.lbl').textContent = checking ? 'Проверявам…' : on ? 'Говори сега…' : 'Кажи';
   ui.mic.setAttribute('aria-pressed', String(on));
 }
-function spSetRecording(ui, on) {
+function spSetRecording(ui, on, waiting) {
   if (!ui) return;
   ui.recBtn.classList.toggle('listening', on);
-  ui.recBtn.querySelector('.lbl').textContent = on ? 'Записвам… Спри' : 'Запиши се';
+  ui.recBtn.querySelector('.lbl').textContent = waiting ? 'Разреши микрофона…' : on ? 'Записвам… Спри' : 'Запиши се';
+  if (waiting) ui.recBtn.setAttribute('aria-busy', 'true');
+  else ui.recBtn.removeAttribute('aria-busy');
 }
 
 /* cancel listening: nothing is judged and no message is shown */
@@ -130,10 +137,16 @@ function spAbortListening() {
   sp.rec = null;
   try { rec.abort(); } catch (e) {}
   spSetListening(sp.ui, false);
+  if (sp.ui) sp.ui.heard.hidden = true;
 }
 function spStopRecording(noPlay) {
   const r = sp.recorder;
-  if (r && r !== 'pending' && r.state === 'recording') {
+  if (r && r.pending) {            // the mic is not open yet: cancel the request
+    sp.recorder = null;
+    spSetRecording(sp.ui, false);
+    return;
+  }
+  if (r && r.state === 'recording') {
     r.noPlay = noPlay;
     r.stop();
   }
@@ -150,7 +163,7 @@ function spQuiet() {
 }
 
 function spListen(ui) {
-  if (sp.rec) { try { sp.rec.stop(); } catch (e) {} return; }   // second tap: stop and judge
+  if (sp.rec) { spSetListening(ui, true, true); try { sp.rec.stop(); } catch (e) {} return; }   // second tap: stop and judge
   spQuiet();
   const rec = new SpeechRec();
   rec.lang = 'fr-FR';
@@ -176,8 +189,9 @@ function spListen(ui) {
     spSetListening(ui, false);
     if (finalText) spJudge(ui, finalText);
     else if (error && error !== 'aborted') {
+      ui.heard.hidden = true;
       spMessage(ui, error);
-      if (SP_BROKEN.includes(error)) { sp.srBroken = true; spShowSelf(ui); }
+      if (SP_BROKEN.includes(error)) { sp.srBroken = true; spShowSelf(ui, error); }
     } else if (interimText) spJudge(ui, interimText);
     else spMessage(ui, 'no-speech');
   };
@@ -190,21 +204,31 @@ function spListen(ui) {
 
 /* record yourself and play it back */
 async function spRecord(ui) {
-  if (sp.recorder === 'pending') return;
+  if (sp.recorder && sp.recorder.pending) return;
   if (sp.recorder && sp.recorder.state === 'recording') { spStopRecording(false); return; }
   spQuiet();
-  sp.recorder = 'pending';
+  const token = { pending: true };
+  sp.recorder = token;
+  spSetRecording(ui, false, true);
   let stream;
   try {
     stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   } catch (e) {
+    if (sp.recorder !== token) return;
     sp.recorder = null;
-    spMessage(ui, SP_MEDIA_ERRORS[e && e.name] || 'other');
-    if (!SpeechRec) spShowSelf(ui);
+    spSetRecording(ui, false);
+    const key = SP_MEDIA_ERRORS[e && e.name] || 'other';
+    spMessage(ui, key);
+    if (!SpeechRec) spShowSelf(ui, key);
     return;
   }
   const stopTracks = () => stream.getTracks().forEach(t => t.stop());
-  if (sp.ui !== ui || currentView !== 'speak') { stopTracks(); sp.recorder = null; return; }
+  // cancelled while the permission prompt was open (Кажи, Чуй, another item or tab)
+  if (sp.recorder !== token || sp.ui !== ui || currentView !== 'speak') {
+    stopTracks();
+    if (sp.recorder === token) { sp.recorder = null; spSetRecording(ui, false); }
+    return;
+  }
   let recorder;
   try {
     recorder = new MediaRecorder(stream);
@@ -226,7 +250,7 @@ async function spRecord(ui) {
     if (sp.recUrl) URL.revokeObjectURL(sp.recUrl);
     sp.recUrl = URL.createObjectURL(new Blob(chunks, { type: recorder.mimeType || 'audio/webm' }));
     ui.mine.hidden = false;
-    spPlayMine();
+    spPlayMine(false);
   };
   sp.recorder = recorder;
   try {
@@ -240,11 +264,10 @@ async function spRecord(ui) {
   }
   spSetRecording(ui, true);
 }
-function spPlayMine() {
+function spPlayMine(toggle) {
   if (!sp.recUrl) return;
-  const wasPlaying = sp.audio && !sp.audio.paused;
-  stopAll();
-  spStopMine();
+  const wasPlaying = toggle && sp.audio && !sp.audio.paused;
+  spQuiet();                // nothing plays into an open mic
   if (wasPlaying) return;   // second tap stops it
   const audio = new Audio(sp.recUrl);
   audio.onended = () => { if (sp.audio === audio) sp.audio = null; };
@@ -278,10 +301,16 @@ function spSettingsChanged() {
 }
 
 /* ---------- round ---------- */
-function spCleanup() {
-  spQuiet();
+function spRelease() {
+  spStopMine();
+  spAbortListening();
+  spStopRecording(true);
   if (sp.recUrl) { URL.revokeObjectURL(sp.recUrl); sp.recUrl = null; }
   if (sp.ui) sp.ui.mine.hidden = true;
+}
+function spCleanup() {
+  stopAll();
+  spRelease();
 }
 function spStart(qs) {
   spCleanup();
@@ -336,7 +365,6 @@ function spRenderQ(focus) {
   mic.type = 'button';
   mic.innerHTML = MIC;
   mic.appendChild(el('span', 'lbl', 'Кажи'));
-  mic.setAttribute('aria-label', 'Кажи на глас');
   mic.setAttribute('aria-pressed', 'false');
   const recBtn = el('button', 'btn sp-rec');
   recBtn.type = 'button';
@@ -378,11 +406,11 @@ function spRenderQ(focus) {
   actions.append(skip, selfOk, next);
   card.appendChild(actions);
 
-  const ui = { q, card, mic, recBtn, mine, note, heard, fb, skip, selfOk, next, scoreEl, bar, playBtn };
+  const ui = { q, card, mic, recBtn, mine, note, heard, fb, actions, skip, selfOk, next, scoreEl, bar, playBtn, shownAt: performance.now() };
   sp.ui = ui;
   mic.addEventListener('click', () => spListen(ui));
   recBtn.addEventListener('click', () => spRecord(ui));
-  mine.addEventListener('click', spPlayMine);
+  mine.addEventListener('click', () => spPlayMine(true));
   selfOk.addEventListener('click', () => spSelfOk(ui));
   skip.addEventListener('click', () => spFinishItem(ui));
   next.addEventListener('click', () => spFinishItem(ui));
@@ -392,11 +420,14 @@ function spRenderQ(focus) {
   if (focus) spFocusCurrent();
 }
 
-function spShowSelf(ui) {
+function spShowSelf(ui, error) {
+  const noMic = !canRecord || ['not-allowed', 'audio-capture', 'busy'].includes(error);
   ui.note.textContent = (SpeechRec ? 'Разпознаването на говор не работи в момента. ' : 'Този браузър не разпознава говор. ')
-    + (canRecord ? 'Чуй примера, запиши се и сравни сам.' : 'Чуй примера, повтори го на глас и прецени сам.');
+    + (noMic ? 'Чуй примера, повтори го на глас и прецени сам.' : 'Чуй примера, запиши се и сравни сам.');
   ui.note.hidden = false;
   ui.selfOk.hidden = false;
+  ui.shownAt = performance.now();
+  ui.actions.scrollIntoView({ block: 'nearest' });
 }
 
 function spJudge(ui, heardText) {
@@ -404,13 +435,18 @@ function spJudge(ui, heardText) {
   const q = ui.q;
   const r = spMatch(q.text, heardText);
   if (!q.best || r.ok > q.best.ok) q.best = r;
-  const all = r.ok === r.total && r.total > 0;
+  sp.srBroken = false;
+  ui.note.hidden = true;
+  // saying both forms ("il finit ils finissent") should not pass
+  const tooMuch = r.extra > Math.max(1, Math.floor(r.total / 2));
+  const all = r.ok === r.total && r.total > 0 && !tooMuch;
   const words = el('p', 'dk-answer sp-words');
   r.exp.forEach((t, k) => {
     if (k) words.append(' ');
     words.appendChild(el('span', t.st === 'bad' ? 'dk-bad' : null, t.show));
   });
   const verdict = all ? ['ok', 'Чудесно! Разбрах всичко.']
+    : tooMuch && r.ok === r.total ? ['near', 'Чух и други думи. Кажи само текста.']
     : r.ok / r.total >= 0.6 ? ['near', 'Почти! Не разбрах думите в червено. Чуй примера и опитай пак.']
     : ['bad', 'Не те разбрах добре. Чуй примера бавно и опитай пак.'];
   ui.fb.replaceChildren(el('p', 'verdict ' + verdict[0], verdict[1]), words);
@@ -424,9 +460,11 @@ function spJudge(ui, heardText) {
   ui.skip.hidden = true;
   ui.selfOk.hidden = true;
   (all ? ui.next : ui.mic).focus({ preventScroll: true });
+  ui.actions.scrollIntoView({ block: 'nearest' });
 }
 
 function spSelfOk(ui) {
+  if (performance.now() - ui.shownAt < 400) return;
   const q = ui.q;
   if (!q.ok) {
     q.ok = true;
@@ -477,11 +515,12 @@ function spResult() {
       if (q.best) {
         // the best attempt, with the words that were not understood in red
         const p = el('p', 'fb-line');
-        p.appendChild(el('span', null, 'Разбрах:'));
+        p.appendChild(el('span', null, 'Най-добър опит:'));
         const w = el('span');
         q.best.exp.forEach((t, k) => {
           if (k) w.append(' ');
           w.appendChild(el('span', t.st === 'bad' ? 'dk-bad' : null, t.show));
+          if (t.st === 'bad') w.appendChild(el('span', 'sr-only', ' (неразбрано)'));
         });
         p.appendChild(w);
         li.appendChild(p);
@@ -523,7 +562,8 @@ function spFocusCurrent() {
 }
 
 /* stop the microphone and any playback when leaving the tab */
-VIEWS.filter(v => v !== 'speak').forEach(v => $('tab-' + v).addEventListener('click', spCleanup));
+VIEWS.filter(v => v !== 'speak').forEach(v => $('tab-' + v).addEventListener('click', spRelease));
+document.addEventListener('visibilitychange', () => { if (document.hidden) spRelease(); });
 
 renderSpSettings();
 spStart(null);

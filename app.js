@@ -408,10 +408,12 @@ const finalE = w => /é(e?s?)$/.test(w.replace(/^.*'/, ''));
 function accentMatters(exp, giv) {
   return ACCENT_WORDS.has(strip(exp)) || finalE(norm(exp)) !== finalE(norm(giv)) || addedAccent(exp, giv);
 }
-/* an accent on a letter that has none (alléés, àvons) is a misspelling, not a slip */
+/* an accent on a letter that has none (alléés, àvons, jaï) is a misspelling, not a slip.
+   Letters are compared without spaces, hyphens and apostrophes, œ as oe. */
 function addedAccent(exp, giv) {
-  const e = [...norm(exp)], g = [...norm(giv)];
-  return e.length === g.length && e.some((c, k) => c !== g[k] && c === c.normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
+  const letters = x => norm(x).replace(/œ/g, 'oe').replace(/[\s'-]/g, '').normalize('NFD').match(/.[\u0300-\u036f]*/gu) || [];
+  const e = letters(exp), g = letters(giv);
+  return e.length === g.length && e.some((c, k) => c.length === 1 && g[k].length > 1 && g[k][0] === c);
 }
 /* same words, differing only in accents that do not change them */
 function nearMatch(exp, giv) {
@@ -624,7 +626,7 @@ function renderCard() {
     else if (!cs.flipped && Math.abs(dx) < 10 && Math.abs(dy) < 10) doFlip();
   });
 
-  if (c.kind === 'tr') speak(c.inf, front.querySelector('.say'));
+  if (c.kind === 'tr' && currentView === 'cards') speak(c.inf, front.querySelector('.say'));
 }
 
 function doFlip() {
@@ -1129,6 +1131,9 @@ if (location.hash === '#dictation') startView = 'dictation';
 if (location.hash === '#speak') startView = 'speak';
 showView(startView);
 stopAll();
+
+// no sound when the app goes to the background
+document.addEventListener('visibilitychange', () => { if (document.hidden) stopAll(); });
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   navigator.serviceWorker.register('sw.js').catch(() => {});
