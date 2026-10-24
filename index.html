@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Verbes des loisirs</title>
-<meta name="description" content="Френски глаголи в présent, passé composé и futur proche: спрежения с произношение, карти за запомняне и тест.">
+<meta name="description" content="Френски глаголи в présent, passé composé и futur proche: спрежения с произношение, карти за запомняне, диктовка и тест.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
@@ -31,6 +31,7 @@
   <div class="tabs" role="tablist" aria-label="Изглед">
     <button type="button" role="tab" id="tab-verbs" aria-controls="view-verbs" aria-selected="true">Глаголи</button>
     <button type="button" role="tab" id="tab-cards" aria-controls="view-cards" aria-selected="false">Карти</button>
+    <button type="button" role="tab" id="tab-dictation" aria-controls="view-dictation" aria-selected="false">Диктовка</button>
     <button type="button" role="tab" id="tab-test" aria-controls="view-test" aria-selected="false">Тест</button>
   </div>
 
@@ -84,6 +85,38 @@
     </p>
   </div>
 
+  <div id="view-dictation" role="tabpanel" aria-labelledby="tab-dictation" hidden>
+    <details class="settings">
+      <summary><span>Настройки</span><span class="sum" id="d-sum"></span></summary>
+      <div class="settings-body">
+        <div class="field">
+          <span class="field-label" id="lbl-d-kind">Какво да диктувам</span>
+          <div class="seg" role="group" aria-labelledby="lbl-d-kind" id="d-kind"></div>
+          <p class="set-note">Форми: една глаголна форма с местоимението (nous sommes allés). Изречения: цяло изречение.</p>
+        </div>
+        <div class="field">
+          <span class="field-label" id="lbl-d-tenses">Времена</span>
+          <div class="seg" role="group" aria-labelledby="lbl-d-tenses" id="d-tenses"></div>
+        </div>
+        <div class="field">
+          <span class="field-label" id="lbl-d-groups">Групи глаголи</span>
+          <div class="seg" role="group" aria-labelledby="lbl-d-groups" id="d-groups"></div>
+        </div>
+        <div class="field">
+          <span class="field-label" id="lbl-d-count">Брой</span>
+          <div class="seg" role="group" aria-labelledby="lbl-d-count" id="d-count"></div>
+        </div>
+        <p class="set-note">Всяка промяна започва нова диктовка.</p>
+      </div>
+    </details>
+
+    <div id="dict"></div>
+
+    <p class="tip">
+      Слушай и пиши всичко, което чуваш, заедно с местоимението. Можеш да слушаш колкото пъти искаш, а „Бавно“ чете по-бавно. Главните букви и препинателните знаци не се броят. Дума без знаците над буквите се зачита, но ще видиш правилното изписване.
+    </p>
+  </div>
+
   <div id="view-test" role="tabpanel" aria-labelledby="tab-test" hidden>
     <details class="settings">
       <summary><span>Настройки</span><span class="sum" id="set-sum"></span></summary>
@@ -118,5 +151,6 @@
 
 <script src="data.js"></script>
 <script src="app.js"></script>
+<script src="dictation.js"></script>
 </body>
 </html>

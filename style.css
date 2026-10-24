@@ -683,3 +683,31 @@ footer, .tip {
 .qtop > span:last-child { white-space: nowrap; }
 
 .qcard:focus { outline: none; }
+
+/* ---------- Dictation ---------- */
+.dk-play { display: flex; gap: .5rem; flex-wrap: wrap; }
+.dk-btn { display: inline-flex; align-items: center; gap: .4rem; }
+.dk-btn .icon { width: .9em; height: .9em; opacity: 1; }
+.dk-btn.speaking { background: var(--margin); border-color: var(--margin); color: var(--surface); }
+.dk-btn.speaking .icon { color: inherit; }
+.ans.dk-ans {
+  display: block;
+  width: 100%;
+  font-weight: 500;
+  resize: none;
+  line-height: 1.5;
+  padding: .35rem .5rem;
+}
+.ans.dk-ans::placeholder { color: var(--muted); font-weight: 400; font-style: italic; }
+.dk-answer { font-family: var(--f-display); font-size: 1.05rem; }
+.dk-answer > span { overflow-wrap: anywhere; }
+.dk-near { color: var(--warn); text-decoration: underline wavy; text-underline-offset: 3px; }
+.dk-bad { color: var(--margin); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.dk-extra { color: var(--margin); text-decoration: line-through; }
+.dk-given { font-family: var(--f-display); }
+
+/* four tabs on a phone */
+@media (max-width: 420px) {
+  .tabs { width: 100%; }
+  .tabs button { flex: 1; padding-inline: .3rem; font-size: .9rem; }
+}

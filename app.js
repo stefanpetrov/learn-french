@@ -140,11 +140,11 @@ function setPlaying(btn, on) {
 function clearPlaying() {
   document.querySelectorAll('.playing').forEach(b => setPlaying(b, false));
 }
-function makeUtterance(text, target, follow) {
+function makeUtterance(text, target, follow, rate) {
   const u = new SpeechSynthesisUtterance(spoken(text));
   u.lang = 'fr-FR';
   if (voice) u.voice = voice;
-  u.rate = slow ? 0.6 : 0.92;
+  u.rate = rate || (slow ? 0.6 : 0.92);
   u.onstart = () => {
     clearSpeaking();
     if (target) {
@@ -164,10 +164,10 @@ function stopAll() {
   clearSpeaking();
   clearPlaying();
 }
-function speak(text, target) {
+function speak(text, target, rate) {
   if (!synth) return;
   stopAll();
-  synth.speak(makeUtterance(text, target, false));
+  synth.speak(makeUtterance(text, target, false, rate));
 }
 function playSeq(btn, items, follow) {
   if (!synth) return;
@@ -381,7 +381,7 @@ bS.addEventListener('click', () => setSlow(true));
 setSlow(slow);
 
 /* ---------- tabs ---------- */
-const VIEWS = ['verbs', 'cards', 'test'];
+const VIEWS = ['verbs', 'cards', 'dictation', 'test'];
 let currentView = 'verbs';
 function showView(name) {
   currentView = name;
@@ -1108,6 +1108,7 @@ let startView = load('verbes-view', 'verbs');
 if (!VIEWS.includes(startView)) startView = 'verbs';
 if (location.hash === '#test') startView = 'test';
 if (location.hash === '#cards') startView = 'cards';
+if (location.hash === '#dictation') startView = 'dictation';
 showView(startView);
 stopAll();
 
