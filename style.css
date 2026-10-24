@@ -734,8 +734,7 @@ footer, .tip {
 .sp-mic.listening .icon, .sp-rec.listening .icon { animation: pulse .7s ease-in-out infinite alternate; }
 .sp-heard { font-style: italic; }
 .sp-words { margin: 0; }
-.sp-self { align-items: center; }
-.sp-self .set-note { flex: 1 1 100%; margin: 0; }
+.sp-note { margin: 0; }
 @media (prefers-reduced-motion: reduce) {
   .sp-mic.listening .icon, .sp-rec.listening .icon { animation: none; }
 }

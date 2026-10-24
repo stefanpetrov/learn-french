@@ -73,66 +73,96 @@ function dkBuild() {
 
 /* ---------- comparing what was written ---------- */
 const dkSepless = w => w.replace(/['-]/g, '');
-/* "week end", "qu est-ce": every way of writing a hyphen or apostrophe as a space */
-function dkSpaced(key) {
-  let out = [''];
-  for (const ch of key) {
-    out = ch === "'" || ch === '-' ? out.flatMap(o => [o + ch, o + ' ']) : out.map(o => o + ch);
-  }
-  return out.filter(f => f.includes(' '));
-}
 const dkSame = w => DK_SAME[w] || w;
+// times written with digits: 8h, 8 h, 8h00, 8:00, but not "8 heures" (the h form is shown back)
+const DK_TIME = /(\d+)\s*(?:h(?:\s*00)?(?![a-zà-ÿ])|:\s*00)(?!\d)/g;
+// like norm(), but a space next to an apostrophe is kept: "j' ai" is joined later only
+// when it makes an expected word, so "je 'appelle" stays two words
+const dkNorm = t => t.normalize('NFC').toLowerCase().replace(/[’‘`´ʼ＇]/g, "'")
+  .replace(/[\u2010-\u2013\u2212]/g, '-').replace(/\s+/g, ' ').replace(/ ' /g, "' ").trim();
 
-/* Word by word, ignoring capitals and punctuation. Each expected word is ok,
-   near (only an accent, hyphen or apostrophe differs) or bad. A misspelled word
-   counts once; missing and extra words count too. */
+/* Typed (or heard) text as words. raw: what was written, for showing it back;
+   words: what is compared, with digits as number words (10 → dix, 8h → huit heures). */
+function dkWords(text) {
+  const raw = dkNorm(text).replace(DK_TIME, '$1h').replace(DK_PUNCT, ' ').split(' ').filter(w => w && !/^['-]+$/.test(w));
+  const words = [];
+  raw.forEach((r, ri) => {
+    const t = r.match(/^(\d+)h$/);
+    if (t) words.push({ key: DK_NUM[+t[1]] || t[1], raw: [ri] }, { key: 'heures', raw: [ri] });
+    else if (/^\d+$/.test(r)) words.push({ key: DK_NUM[+r] || r, raw: [ri] });
+    else words.push({ key: r, raw: [ri] });
+  });
+  return { raw, words };
+}
+/* "week end", "qu est ce", "j ai", "j ecoute": several written words that
+   together are one expected word with a hyphen or apostrophe (accents ignored) */
+function dkMergeSpaced(expKeys, words) {
+  const targets = new Set(expKeys.filter(k => /['-]/.test(k)).map(k => strip(dkSepless(k))));
+  if (!targets.size) return words;
+  const out = [];
+  for (let s = 0; s < words.length; s++) {
+    let merged = null;
+    for (let len = Math.min(4, words.length - s); len >= 2 && !merged; len--) {
+      const part = words.slice(s, s + len);
+      if (targets.has(part.map(w => strip(dkSepless(w.key))).join(''))) {
+        const key = part.map(w => w.key).join('');
+        // only a space next to a kept apostrophe ("j' ai") is not a slip; a missing hyphen or apostrophe is
+        merged = { key, raw: [...new Set(part.flatMap(w => w.raw))], merged: !expKeys.includes(key), len };
+      }
+    }
+    if (merged) { out.push(merged); s += merged.len - 1; }
+    else out.push(words[s]);
+  }
+  return out;
+}
+
+/* Word by word, ignoring capitals and punctuation, as a word-level edit distance:
+   each expected word is ok, near (only an accent, hyphen or apostrophe that does not
+   change the word) or bad. A misspelled, missing or extra word is one mistake. */
 function dkCompare(expected, given) {
   const exp = expected.split(/\s+/).filter(Boolean).map(show => ({ show, key: norm(show).replace(DK_PUNCT, '') }));
   const ek = exp.filter(t => t.key);
-  let gt = ' ' + norm(given).replace(DK_PUNCT, ' ').replace(/(\d+)\s*h\b/g, '$1 heures')
-    .replace(/\d+/g, d => DK_NUM[d] || d).replace(/\s+/g, ' ') + ' ';
-  ek.forEach(t => {
-    if (/['-]/.test(t.key)) dkSpaced(t.key).forEach(f => { gt = gt.split(' ' + f + ' ').join(' ' + dkSepless(t.key) + ' '); });
-  });
-  const g = gt.split(' ').filter(Boolean).map(dkSame);
-  const a = ek.map(t => strip(dkSepless(t.key)));
-  const b = g.map(w => strip(dkSepless(w)));
-  const n = a.length, m = b.length;
-  // longest common subsequence, so one missing word does not mark the rest as wrong
-  const L = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
-  for (let i = n - 1; i >= 0; i--) {
-    for (let j = m - 1; j >= 0; j--) {
-      L[i][j] = a[i] === b[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
-    }
-  }
-  const gs = g.map(w => ({ w, st: null }));
-  let bad = 0, i = 0, j = 0, gi = [], gj = [];
-  // words between two matches: pair them up as misspellings, the rest are missing or extra
-  const gap = () => {
-    gi.forEach(k => { ek[k].st = 'bad'; });
-    gj.forEach((k, x) => { gs[k].st = x < gi.length ? 'wrong' : 'extra'; });
-    bad += Math.max(gi.length, gj.length);
-    gi = [];
-    gj = [];
+  const typed = dkWords(given);
+  const words = dkMergeSpaced(ek.map(t => t.key), typed.words);
+  const n = ek.length, m = words.length;
+  // 0 = same, 1 = near, 2 = another word
+  const kind = (e, w) => {
+    const a = dkSame(e), b = dkSame(w.key);
+    if (a === b) return w.merged ? 1 : 0;
+    if (strip(dkSepless(a)) === strip(dkSepless(b))) return accentMatters(a, b) ? 2 : 1;
+    return 2;
   };
-  while (i < n && j < m) {
-    if (a[i] === b[j]) {
-      gap();
-      const e = ek[i].key, w = g[j];
-      if (e === w) ek[i].st = 'ok';
-      else if (dkSepless(e) !== dkSepless(w) && accentMatters(e, w)) { ek[i].st = 'bad'; gs[j].st = 'wrong'; bad++; }
-      else ek[i].st = 'near';
-      i++; j++;
-    } else if (L[i + 1][j] >= L[i][j + 1]) {
-      gi.push(i++);
-    } else {
-      gj.push(j++);
+  const COST = [0, 1, 100], GAP = 100;
+  const K = ek.map(t => words.map(w => kind(t.key, w)));
+  const D = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+  for (let i = n; i >= 0; i--) {
+    for (let j = m; j >= 0; j--) {
+      if (i === n) D[i][j] = (m - j) * GAP;
+      else if (j === m) D[i][j] = (n - i) * GAP;
+      else D[i][j] = Math.min(COST[K[i][j]] + D[i + 1][j + 1], GAP + D[i + 1][j], GAP + D[i][j + 1]);
     }
   }
-  while (i < n) gi.push(i++);
-  while (j < m) gj.push(j++);
-  gap();
-  return { exp, given: gs, bad, near: ek.filter(t => t.st === 'near').length };
+  const wst = words.map(() => null);
+  let bad = 0, i = 0, j = 0;
+  while (i < n || j < m) {
+    if (i < n && j < m && D[i][j] === COST[K[i][j]] + D[i + 1][j + 1]) {
+      const k = K[i][j];
+      ek[i].st = k === 0 ? 'ok' : k === 1 ? 'near' : 'bad';
+      if (k === 2) { wst[j] = 'wrong'; bad++; }
+      i++; j++;
+    } else if (i < n && (j === m || D[i][j] === GAP + D[i + 1][j])) {
+      ek[i].st = 'bad'; bad++; i++;
+    } else {
+      wst[j] = 'extra'; bad++; j++;
+    }
+  }
+  // back to the words as they were written
+  const shownBack = typed.raw.map((w, ri) => {
+    const sts = words.map((x, k) => x.raw.includes(ri) ? wst[k] : undefined).filter(x => x !== undefined);
+    const st = sts.includes('wrong') ? 'wrong' : sts.length && sts.every(x => x === 'extra') ? 'extra' : null;
+    return { w, st };
+  });
+  return { exp, given: shownBack, bad, near: ek.filter(t => t.st === 'near').length };
 }
 /* the accepted spelling closest to what was written (allé / allée / allés …) */
 function dkBest(q, given) {
@@ -344,12 +374,12 @@ function dkCheck(ui, gaveUp) {
   ui.bar.style.width = ((dk.i + 1) / dk.qs.length * 100) + '%';
 
   const verdict = exact ? ['ok', 'Правилно!']
-    : near ? ['near', 'Почти! Внимавай за знаците над буквите и тиретата.']
+    : near ? ['near', 'Почти! Внимавай за знаците над буквите, тиретата и апострофите.']
     : gaveUp ? ['bad', 'Ето текста:'] : ['bad', r.bad === 1 ? 'Една грешка.' : r.bad + ' грешки.'];
   const answer = dkAnswerButton(q, gaveUp ? { exp: r.exp.map(t => ({ show: t.show })) } : r);
   const parts = [el('p', 'verdict ' + verdict[0], verdict[1]), answer];
   if (!exact && !gaveUp) parts.push(dkGivenLine(r));
-  if (r.bad && r.near && !gaveUp) parts.push(el('p', 'fb-line', 'Вълнообразно подчертаното се зачита: липсва само знак над буквата или тире.'));
+  if (r.bad && r.near && !gaveUp) parts.push(el('p', 'fb-line', 'Вълнообразно подчертаното се зачита: липсва само знак над буквата, тире или апостроф.'));
   const bracketed = q.text.split(/\s+/).find(x => x.includes('('));
   if (!exact && bracketed) {
     parts.push(el('p', 'fb-line', 'Окончанието в скобите зависи от рода и числото. Тук са верни: ' + variants(bracketed.replace(DK_PUNCT, '')).join(', ') + '.'));

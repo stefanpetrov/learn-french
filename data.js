@@ -231,7 +231,7 @@ const SENT = [
   ['pc', 'perdre', 'Nous ___ le match.', 'avons perdu', 'Загубихме мача.'],
   ['pc', 'répondre', 'Tu ___ à son message ?', 'as répondu', 'Отговори ли на съобщението му?'],
   ['pc', 'vendre', 'Ils ___ leur voiture.', 'ont vendu', 'Те продадоха колата си.'],
-  ['pc', 'plaire', "Le concert m'___ beaucoup.", 'a plu', 'Концертът много ми хареса.'],
+  ['pc', 'plaire', "Le concert m'___.", 'a plu', 'Концертът ми хареса.'],
   ['pc', 'voir', 'Vous ___ ce film ?', 'avez vu', 'Гледахте ли този филм?'],
   ['pc', 'prendre', 'Nous ___ le train pour Lyon.', 'avons pris', 'Взехме влака за Лион.'],
   ['pc', 'apprendre', "J'___ à nager à six ans.", 'ai appris', 'Научих се да плувам на шест години.'],

@@ -396,7 +396,7 @@ VIEWS.forEach(v => $('tab-' + v).addEventListener('click', () => showView(v)));
 
 /* ---------- answer checking ---------- */
 function norm(s) {
-  return s.normalize('NFC').toLowerCase().replace(/[’‘`´ʼ＇]/g, "'").replace(/\s+/g, ' ').replace(/ ?' ?/g, "'").trim();
+  return s.normalize('NFC').toLowerCase().replace(/[’‘`´ʼ＇]/g, "'").replace(/[\u2010-\u2013\u2212]/g, '-').replace(/\s+/g, ' ').replace(/ ?' ?/g, "'").trim();
 }
 function strip(s) {
   return norm(s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/œ/g, 'oe');
@@ -406,7 +406,12 @@ function strip(s) {
 const ACCENT_WORDS = new Set(['a', 'ou', 'la', 'du']);
 const finalE = w => /é(e?s?)$/.test(w.replace(/^.*'/, ''));
 function accentMatters(exp, giv) {
-  return ACCENT_WORDS.has(strip(exp)) || finalE(norm(exp)) !== finalE(norm(giv));
+  return ACCENT_WORDS.has(strip(exp)) || finalE(norm(exp)) !== finalE(norm(giv)) || addedAccent(exp, giv);
+}
+/* an accent on a letter that has none (alléés, àvons) is a misspelling, not a slip */
+function addedAccent(exp, giv) {
+  const e = [...norm(exp)], g = [...norm(giv)];
+  return e.length === g.length && e.some((c, k) => c !== g[k] && c === c.normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
 }
 /* same words, differing only in accents that do not change them */
 function nearMatch(exp, giv) {
