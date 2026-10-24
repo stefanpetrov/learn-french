@@ -264,6 +264,7 @@ const GROUP_IDS = GROUPS.map(g => g.id);
 const GROUP_ITEMS = GROUPS.map(g => [g.id, g.chip]);
 const TENSE_IDS = TENSES.map(t => t.id);
 const TENSE_ITEMS = TENSES.map(t => [t.id, t.label]);
+const tensesLabel = set => TENSE_IDS.filter(t => set.has(t)).map(t => TENSE[t].label).join(', ');
 function groupsLabel(set) {
   if (set.size === GROUPS.length) return null;
   return set.size === 1 ? '1 група' : set.size + ' групи';
@@ -443,8 +444,8 @@ function renderCardSettings() {
   $('c-count').replaceChildren(...CARD_COUNTS.map(n => toggleBtn(String(n), cs.count === n, () => { cs.count = n; cardSettingsChanged(); })));
   const pool = cardPool();
   $('c-known').textContent = 'Научени карти с тези настройки: ' + knownCount(pool) + ' от ' + pool.length + '.';
-  const parts = [KINDS.find(k => k[0] === cs.kind)[1], cs.count + ' карти'];
-  if (cs.kind === 'cj') parts.push([...cs.tenses].map(t => TENSE[t].label).join(', '));
+  const parts = [KINDS.find(k => k[0] === cs.kind)[1], cardsWord(Math.min(cs.count, pool.length))];
+  if (cs.kind === 'cj') parts.push(tensesLabel(cs.tenses));
   const gl = groupsLabel(cs.groups);
   if (gl) parts.push(gl);
   $('c-sum').textContent = parts.join(' · ');
@@ -463,16 +464,23 @@ $('c-reset').addEventListener('click', () => {
 });
 
 /* Pick a deck of cs.count cards: least known first (random within the same
-   level) and one card per verb before any verb repeats. Verbs in skipInf
-   (the round just played) are used only when no other cards are left. */
-function pickDeck(skipInf) {
-  const skip = skipInf || new Set();
+   level) and one card per verb before any verb repeats. Cards come in tiers:
+   verbs not in skipInf first, then unplayed cards of those verbs (other forms),
+   and the cards in skipKeys only when nothing else is left. */
+function pickDeck(skipInf, skipKeys) {
+  const skipV = skipInf || new Set();
+  const skipK = skipKeys || new Set();
   const ranked = shuffle(cardPool())
     .map(c => [c, boxes[c.key] || 0])
     .sort((a, b) => a[1] - b[1])
     .map(x => x[0]);
+  const tiers = [
+    ranked.filter(c => !skipV.has(c.inf)),
+    ranked.filter(c => skipV.has(c.inf) && !skipK.has(c.key)),
+    ranked.filter(c => skipV.has(c.inf) && skipK.has(c.key))
+  ];
   const deck = [];
-  [ranked.filter(c => !skip.has(c.inf)), ranked.filter(c => skip.has(c.inf))].forEach(tier => {
+  tiers.forEach(tier => {
     const used = new Set();
     for (const c of tier) {
       if (deck.length >= cs.count) break;
@@ -488,16 +496,18 @@ function pickDeck(skipInf) {
   return shuffle(deck);
 }
 
-const cardsWord = k => k + ' ' + (k === 1 ? 'карта' : 'карти');
-const questionsWord = k => k + ' ' + (k === 1 ? 'въпрос' : 'въпроса');
+// a number and its noun stay on one line (non-breaking space)
+const cardsWord = k => k + '\u00a0' + (k === 1 ? 'карта' : 'карти');
+const questionsWord = k => k + '\u00a0' + (k === 1 ? 'въпрос' : 'въпроса');
 
-/* keepInf: verbs of the round this one replays, so "new words" stays new
+/* keep: { inf, keys } of the round this one replays, so "new words" stays new
    after "same cards" or "only the hard ones" */
-function startCards(list, keepInf) {
+function startCards(list, keep) {
   stopAll();
   const deck = list || pickDeck();
   cs.deck = deck.slice();
-  cs.roundInf = new Set([...(keepInf || []), ...deck.map(c => c.inf)]);
+  cs.roundInf = new Set([...(keep ? keep.inf : []), ...deck.map(c => c.inf)]);
+  cs.roundKeys = new Set([...(keep ? keep.keys : []), ...deck.map(c => c.key)]);
   cs.queue = deck.slice();
   cs.total = deck.length;
   cs.done = 0;
@@ -517,7 +527,7 @@ function cardFaces(c) {
     const f = forms(c.inf, 'pr')[0];
     back.appendChild(formButton(f));
   } else if (c.kind === 'rv') {
-    front.append(el('p', 'eyebrow', 'Как е на френски?'), el('p', 'big-text', v.bg));
+    front.append(el('p', 'eyebrow', 'Как е на френски?'), el('p', 'big-text', promptMeaning(c.inf)));
     back.append(el('p', 'eyebrow', v.bg), sayButton(c.inf, 'say big'));
   } else {
     const f = forms(c.inf, c.t)[c.p];
@@ -582,12 +592,17 @@ function renderCard() {
 
   // tap to flip, swipe to grade
   let x0 = null, y0 = null;
-  card.addEventListener('pointerdown', e => { x0 = e.clientX; y0 = e.clientY; });
+  card.addEventListener('pointerdown', e => {
+    if (e.target.closest('button')) return;
+    x0 = e.clientX;
+    y0 = e.clientY;
+    try { card.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+  card.addEventListener('pointercancel', () => { x0 = null; });
   card.addEventListener('pointerup', e => {
     if (x0 == null) return;
     const dx = e.clientX - x0, dy = e.clientY - y0;
     x0 = null;
-    if (e.target.closest('button')) return;
     if (cs.flipped && Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) grade(dx > 0);
     else if (!cs.flipped && Math.abs(dx) < 10 && Math.abs(dy) < 10) doFlip();
   });
@@ -651,46 +666,38 @@ function renderCardsEnd() {
   // what next: test these words, replay the same cards, or new words
   const deck = cs.deck.slice();
   const missed = cs.missedCards.slice();
-  const roundInf = new Set(cs.roundInf);
-  const word = cs.kind === 'cj' ? 'глаголи' : 'думи';
+  const round = { inf: new Set(cs.roundInf), keys: new Set(cs.roundKeys) };
+  const cj = cs.kind === 'cj';
+  const word = cj ? 'глаголи' : 'думи';
   const one = n === 1;
 
   box.appendChild(el('h3', 'next-title', 'Какво следва?'));
   const choices = el('div', 'choices');
 
   const testBtn = choiceButton(
-    one ? (cs.kind === 'cj' ? 'Тест с този глагол' : 'Тест с тази дума') : 'Тест с тези ' + word,
-    (cs.kind === 'cj' ? 'Пишеш същите форми' : 'Виждаш значението и пишеш глагола на френски') + ' · ' + questionsWord(n),
+    one ? (cj ? 'Тест с този глагол' : 'Тест с тази дума') : 'Тест с тези ' + word,
+    (cj ? (one ? 'Пишеш същата форма' : 'Пишеш същите форми') : 'Виждаш значението и пишеш глагола на френски') + ' · ' + questionsWord(n),
     () => startTestFromCards(deck), true);
   const againBtn = choiceButton(
     one ? 'Пак същата карта' : 'Пак същите карти',
-    one ? 'Изиграй я отново' : 'Изиграй отново същите ' + n + ' карти',
-    () => startCards(shuffle(deck.slice()), roundInf));
+    one ? 'Изиграй я отново' : 'Изиграй отново същите ' + cardsWord(n),
+    () => startCards(shuffle(deck.slice()), round));
   choices.append(testBtn, againBtn);
   if (missed.length && missed.length < n) {
     const hard = el('button', 'linkbtn choice-sub', 'Само трудните (' + missed.length + ')');
     hard.type = 'button';
-    hard.addEventListener('click', () => startCards(shuffle(missed.slice()), roundInf));
+    hard.addEventListener('click', () => startCards(shuffle(missed.slice()), round));
     choices.appendChild(hard);
   }
 
   // the next deck is picked now, so the description says exactly what it holds
-  const next = pickDeck(roundInf);
-  const newCards = next.filter(c => !roundInf.has(c.inf)).length;
-  const deckKeys = new Set(deck.map(c => c.key));
-  const otherForms = next.filter(c => !deckKeys.has(c.key)).length;
+  const next = pickDeck(round.inf, round.keys);
+  const fresh = next.filter(c => !round.inf.has(c.inf));
+  const newVerbs = new Set(fresh.map(c => c.inf)).size;
+  const otherForms = next.filter(c => round.inf.has(c.inf) && !round.keys.has(c.key)).length;
+  const repeats = next.length - fresh.length - otherForms;
   let newBtn;
-  if (newCards === next.length) {
-    newBtn = choiceButton('Нови ' + word, cardsWord(next.length) + ' с други ' + word, () => startCards(next));
-  } else if (newCards > 0) {
-    newBtn = choiceButton('Нови ' + word,
-      cardsWord(next.length) + ': ' + newCards + ' с нови ' + word + ', останалите от досегашните',
-      () => startCards(next));
-  } else if (otherForms > 0) {
-    newBtn = choiceButton('Нови карти',
-      'Няма други глаголи с тези настройки, затова ще са други форми на същите. Добави групи от Настройки.',
-      () => startCards(next));
-  } else {
+  if (repeats === next.length) {
     newBtn = choiceButton('Още ' + word,
       'Няма други ' + word + ' с тези настройки. Отвори Настройки и добави групи.',
       () => {
@@ -699,6 +706,16 @@ function renderCardsEnd() {
         set.querySelector('summary').focus({ preventScroll: true });
         set.scrollIntoView({ block: 'nearest' });
       });
+  } else {
+    const verbsTxt = newVerbs === 1 ? '1\u00a0нов глагол' : newVerbs + '\u00a0нови глагола';
+    const parts = [];
+    if (fresh.length) parts.push(fresh.length + '\u00a0с ' + (cj ? verbsTxt : fresh.length === 1 ? 'нова дума' : 'нови думи'));
+    if (otherForms) parts.push(otherForms + '\u00a0' + (otherForms === 1 ? 'друга форма' : 'други форми') + ' на същите глаголи');
+    if (repeats) parts.push(repeats + '\u00a0от досегашните');
+    let desc;
+    if (fresh.length === next.length) desc = cardsWord(next.length) + ' с ' + (cj ? verbsTxt : 'други думи');
+    else desc = cardsWord(next.length) + ': ' + parts.join(', ');
+    newBtn = choiceButton(fresh.length ? 'Нови ' + word : 'Други форми', desc, () => startCards(next));
   }
   choices.appendChild(newBtn);
   box.appendChild(choices);
@@ -728,7 +745,8 @@ function startTestFromCards(deck) {
 document.addEventListener('keydown', e => {
   if (currentView !== 'cards' || !cardUI) return;
   if (e.target.closest('input, textarea, summary') || e.altKey || e.ctrlKey || e.metaKey) return;
-  if (!cs.flipped && (e.key === ' ' || e.key === 'Enter') && !e.target.closest('button')) { e.preventDefault(); doFlip(); }
+  const btn = e.target.closest('button');
+  if (!cs.flipped && (e.key === ' ' || e.key === 'Enter') && (!btn || btn === $('tab-cards'))) { e.preventDefault(); doFlip(); }
   else if (cs.flipped && e.key === 'ArrowRight') { e.preventDefault(); grade(true); }
   else if (cs.flipped && e.key === 'ArrowLeft') { e.preventDefault(); grade(false); }
 });
@@ -757,8 +775,9 @@ function conjQ(inf, p, tense) {
 /* vocabulary question: Bulgarian meaning -> French infinitive.
    Brackets with French in them are hidden, so plaire's hint does not give the answer away. */
 const baseMeaning = bg => bg.replace(/\s*\([^)]*\)/g, '').trim();
+const promptMeaning = inf => VERB[inf].bg.replace(/\s*\([^)]*[a-z][^)]*\)/gi, '').trim();
 function wordQ(inf) {
-  const bg = VERB[inf].bg.replace(/\s*\([^)]*[a-z][^)]*\)/gi, '').trim();
+  const bg = promptMeaning(inf);
   // other verbs with the same meaning count too (живея: vivre, habiter)
   const same = Object.keys(VERB).filter(x => x !== inf && baseMeaning(VERB[x].bg) === baseMeaning(VERB[inf].bg));
   return { type: 'word', inf, tense: null, answer: inf, also: same, speak: inf, bg };
@@ -768,13 +787,16 @@ function sentQ(row) {
   const [before, after] = s.split('___');
   return { type: 'sent', tense, inf, before, after, answer: a, speak: before + a + after, bg };
 }
+function sentPoolFor() {
+  return SENT.filter(r => st.tenses.has(r[0]) && st.groups.has(VERB[r[1]].g));
+}
 function buildRound() {
   const conjPool = [];
   Object.keys(VERB).forEach(inf => {
     if (!st.groups.has(VERB[inf].g)) return;
     st.tenses.forEach(t => { for (let p = 0; p < 6; p++) conjPool.push([inf, p, t]); });
   });
-  const sentPool = SENT.filter(r => st.tenses.has(r[0]) && st.groups.has(VERB[r[1]].g));
+  const sentPool = sentPoolFor();
   shuffle(conjPool);
   shuffle(sentPool);
 
@@ -810,7 +832,9 @@ function renderSum() {
     $('set-sum').textContent = 'По картите · ' + questionsWord(st.qs.length);
     return;
   }
-  const parts = [MODES.find(x => x[0] === st.mode)[1], st.count + ' въпроса', [...st.tenses].map(t => TENSE[t].label).join(', ')];
+  // only "Изречения" can run short: few sentences for some groups and tenses
+  const n = st.mode === 'sent' ? Math.min(st.count, sentPoolFor().length) : st.count;
+  const parts = [MODES.find(x => x[0] === st.mode)[1], questionsWord(n), tensesLabel(st.tenses)];
   const gl = groupsLabel(st.groups);
   if (gl) parts.push(gl);
   $('set-sum').textContent = parts.join(' · ');
@@ -840,9 +864,7 @@ function renderQ(focus) {
 
   const top = el('div', 'qtop');
   const scoreEl = el('span', null, 'Верни: ' + st.score);
-  const lead = el('span', null, 'Въпрос ' + (st.i + 1) + ' от ' + st.qs.length);
-  if (st.fromCards) lead.append(' ', el('span', 'src', '· по картите'));
-  top.append(lead, scoreEl);
+  top.append(el('span', null, 'Въпрос ' + (st.i + 1) + ' от ' + st.qs.length), scoreEl);
   const prog = el('div', 'progress');
   const bar = el('i');
   bar.style.width = (st.i / st.qs.length * 100) + '%';
@@ -970,7 +992,7 @@ function check(ui, gaveUp) {
     : near ? ['near', 'Почти! Внимавай за знаците над буквите.']
     : gaveUp ? ['bad', 'Ето отговора:'] : ['bad', 'Грешно.'];
   const line = el('p', 'fb-line');
-  if (q.type !== 'sent') line.appendChild(el('span', null, 'Правилно е'));
+  if (q.type !== 'sent' && !exact) line.appendChild(el('span', null, 'Правилно е'));
   const sayBtn = answerFeedback(q);
   line.appendChild(sayBtn);
   ui.fb.replaceChildren(el('p', 'verdict ' + verdict[0], verdict[1]), line);
@@ -1061,6 +1083,7 @@ function renderResult() {
   card.appendChild(actions);
 
   quiz.replaceChildren(card);
+  actions.querySelector('.primary').focus({ preventScroll: true });
   card.scrollIntoView({ block: 'nearest' });
 }
 
