@@ -179,7 +179,7 @@ const SENT = [
   ['pr', 'répondre', 'Elle ___ au téléphone.', 'répond', 'Тя отговаря на телефона.'],
   ['pr', 'perdre', 'Nous ___ souvent au tennis.', 'perdons', 'Често губим на тенис.'],
   ['pr', 'traduire', 'Je ___ le texte en bulgare.', 'traduis', 'Превеждам текста на български.'],
-  ['pr', 'inscrire', "J'___ ma fille au cours de piano.", 'inscris', 'Записвам дъщеря си на уроци по пиано.'],
+  ['pr', 'inscrire', "J'___ ma fille au cours de piano.", 'inscris', 'Записвам дъщеря си на курс по пиано.'],
 
   ['pr', 'savoir', 'Je ___ nager.', 'sais', 'Мога да плувам.'],
   ['pr', 'savoir', 'Elle ___ jouer du piano.', 'sait', 'Тя може да свири на пиано.'],

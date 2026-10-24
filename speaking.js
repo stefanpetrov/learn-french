@@ -232,7 +232,7 @@ function spRenderQ(focus) {
 
   const top = el('div', 'qtop');
   const scoreEl = el('span', null, 'Казани: ' + sp.score);
-  top.append(el('span', null, 'Говор ' + (sp.i + 1) + ' от ' + sp.qs.length), scoreEl);
+  top.append(el('span', null, 'Въпрос ' + (sp.i + 1) + ' от ' + sp.qs.length), scoreEl);
   const prog = el('div', 'progress');
   const bar = el('i');
   bar.style.width = (sp.i / sp.qs.length * 100) + '%';
@@ -360,7 +360,7 @@ function spSelf(ui, ok) {
     ui.scoreEl.textContent = 'Казани: ' + sp.score;
   }
   if (ok) spFinishItem(ui);
-  else ui.mine.hidden || ui.recBtn.focus({ preventScroll: true });
+  else (canRecord ? ui.recBtn : ui.card.querySelector('.dk-btn')).focus({ preventScroll: true });
 }
 
 function spFinishItem(ui) {

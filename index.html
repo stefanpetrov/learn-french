@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Verbes des loisirs</title>
-<meta name="description" content="Френски глаголи в présent, passé composé и futur proche: спрежения с произношение, карти за запомняне, диктовка и тест.">
+<meta name="description" content="Френски глаголи в présent, passé composé и futur proche: спрежения с произношение, карти за запомняне, диктовка, произношение и тест.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
@@ -32,6 +32,7 @@
     <button type="button" role="tab" id="tab-verbs" aria-controls="view-verbs" aria-selected="true">Глаголи</button>
     <button type="button" role="tab" id="tab-cards" aria-controls="view-cards" aria-selected="false">Карти</button>
     <button type="button" role="tab" id="tab-dictation" aria-controls="view-dictation" aria-selected="false">Диктовка</button>
+    <button type="button" role="tab" id="tab-speak" aria-controls="view-speak" aria-selected="false">Говор</button>
     <button type="button" role="tab" id="tab-test" aria-controls="view-test" aria-selected="false">Тест</button>
   </div>
 
@@ -113,7 +114,39 @@
     <div id="dict"></div>
 
     <p class="tip">
-      Слушай и пиши всичко, което чуваш, заедно с местоимението. Можеш да слушаш колкото пъти искаш, а „Бавно“ чете по-бавно. Главните букви и препинателните знаци не се броят. Дума без знаците над буквите се зачита, но ще видиш правилното изписване.
+      Слушай и пиши всичко, което чуваш (при формите заедно с местоимението: nous sommes allés). Можеш да слушаш колкото пъти искаш, а „Бавно“ чете по-бавно. За é, è, ç… използвай бутоните под полето. Главните букви и препинателните знаци не се броят. Дума без знак над буквата се зачита, освен ако става друга дума (a и à, joue и joué).
+    </p>
+  </div>
+
+  <div id="view-speak" role="tabpanel" aria-labelledby="tab-speak" hidden>
+    <details class="settings">
+      <summary><span>Настройки</span><span class="sum" id="s-sum"></span></summary>
+      <div class="settings-body">
+        <div class="field">
+          <span class="field-label" id="lbl-s-kind">Какво да казваш</span>
+          <div class="seg" role="group" aria-labelledby="lbl-s-kind" id="s-kind"></div>
+          <p class="set-note">Форми: глагол с местоимението (nous sommes allés). Изречения: цяло изречение.</p>
+        </div>
+        <div class="field">
+          <span class="field-label" id="lbl-s-tenses">Времена</span>
+          <div class="seg" role="group" aria-labelledby="lbl-s-tenses" id="s-tenses"></div>
+        </div>
+        <div class="field">
+          <span class="field-label" id="lbl-s-groups">Групи глаголи</span>
+          <div class="seg" role="group" aria-labelledby="lbl-s-groups" id="s-groups"></div>
+        </div>
+        <div class="field">
+          <span class="field-label" id="lbl-s-count">Брой</span>
+          <div class="seg" role="group" aria-labelledby="lbl-s-count" id="s-count"></div>
+        </div>
+        <p class="set-note">Всяка промяна започва нов кръг.</p>
+      </div>
+    </details>
+
+    <div id="speak"></div>
+
+    <p class="tip">
+      Чуй примера, после натисни „Кажи“ и го повтори на глас. Телефонът показва кои думи е разбрал. Разпознаването работи в Chrome и Safari и има нужда от интернет и разрешение за микрофона. С „Запиши се“ чуваш собствения си глас и го сравняваш с примера. Записът остава само на телефона.
     </p>
   </div>
 
@@ -152,5 +185,6 @@
 <script src="data.js"></script>
 <script src="app.js"></script>
 <script src="dictation.js"></script>
+<script src="speaking.js"></script>
 </body>
 </html>

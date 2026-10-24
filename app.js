@@ -381,7 +381,7 @@ bS.addEventListener('click', () => setSlow(true));
 setSlow(slow);
 
 /* ---------- tabs ---------- */
-const VIEWS = ['verbs', 'cards', 'dictation', 'test'];
+const VIEWS = ['verbs', 'cards', 'dictation', 'speak', 'test'];
 let currentView = 'verbs';
 function showView(name) {
   currentView = name;
@@ -396,10 +396,22 @@ VIEWS.forEach(v => $('tab-' + v).addEventListener('click', () => showView(v)));
 
 /* ---------- answer checking ---------- */
 function norm(s) {
-  return s.normalize('NFC').toLowerCase().replace(/[’‘`´]/g, "'").replace(/\s+/g, ' ').replace(/' /g, "'").trim();
+  return s.normalize('NFC').toLowerCase().replace(/[’‘`´ʼ＇]/g, "'").replace(/\s+/g, ' ').replace(/ ?' ?/g, "'").trim();
 }
 function strip(s) {
   return norm(s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/œ/g, 'oe');
+}
+/* An accent slip usually still counts ("Почти"), but not when it makes another word:
+   a / à, ou / où, la / là, du / dû, or a heard final é (joué ≠ joue). */
+const ACCENT_WORDS = new Set(['a', 'ou', 'la', 'du']);
+const finalE = w => /é(e?s?)$/.test(w.replace(/^.*'/, ''));
+function accentMatters(exp, giv) {
+  return ACCENT_WORDS.has(strip(exp)) || finalE(norm(exp)) !== finalE(norm(giv));
+}
+/* same words, differing only in accents that do not change them */
+function nearMatch(exp, giv) {
+  const a = norm(exp).split(' '), b = norm(giv).split(' ');
+  return a.length === b.length && a.every((w, k) => w === b[k] || (strip(w) === strip(b[k]) && !accentMatters(w, b[k])));
 }
 
 /* ---------- flashcards ---------- */
@@ -978,7 +990,7 @@ function check(ui, gaveUp) {
     : q.type === 'word' ? [q.answer, ...q.also].flatMap(x => [x, bareInf(x)]) : [q.answer];
   const cands = base.concat(...base.map(variants));
   const exact = !gaveUp && cands.some(c => norm(c) === norm(val));
-  const near = !gaveUp && !exact && cands.some(c => strip(c) === strip(val));
+  const near = !gaveUp && !exact && cands.some(c => nearMatch(c, val));
   const good = exact || near;
   if (good) st.score++;
   else st.wrong.push({ q, given: val.trim() });
@@ -1109,6 +1121,7 @@ if (!VIEWS.includes(startView)) startView = 'verbs';
 if (location.hash === '#test') startView = 'test';
 if (location.hash === '#cards') startView = 'cards';
 if (location.hash === '#dictation') startView = 'dictation';
+if (location.hash === '#speak') startView = 'speak';
 showView(startView);
 stopAll();
 

@@ -4,10 +4,15 @@
 const DK_KINDS = [['mix', 'Смесено'], ['form', 'Форми'], ['sent', 'Изречения']];
 const DK_COUNTS = [10, 20];
 const DK_KEYS = ['é', 'è', 'ê', 'à', 'â', 'ç', 'î', 'û'];
+const DK_NORMAL = 0.92;
 const DK_SLOW = 0.6;
 // il/ils forms often sound the same (il joue, ils jouent), so say which one is meant
-const DK_PERSON = { 2: 'един човек (той или тя)', 5: 'няколко души (те)' };
+const DK_PERSON = { 2: 'един човек (той)', 5: 'няколко души (те)' };
 const DK_PUNCT = /[.,!?;:«»"“”…]/g;
+// words that sound the same and the translation does not decide
+const DK_SAME = { amies: 'amis', professeure: 'professeur', weekend: 'week-end' };
+// numbers written with digits count as the word
+const DK_NUM = { 2: 'deux', 3: 'trois', 6: 'six', 8: 'huit', 9: 'neuf', 10: 'dix', 20: 'vingt' };
 
 const savedDk = load('diktovka-set', {}) || {};
 const dk = {
@@ -24,54 +29,74 @@ function saveDkSettings() {
 }
 
 /* ---------- questions ---------- */
-function dkSentPool() {
-  return SENT.filter(r => dk.tenses.has(r[0]) && dk.groups.has(VERB[r[1]].g));
+/* sentences for cfg = { tenses, groups } */
+function sentPoolOf(cfg) {
+  return SENT.filter(r => cfg.tenses.has(r[0]) && cfg.groups.has(VERB[r[1]].g));
 }
-function dkFormQ(inf, p, tense) {
-  return { type: 'form', inf, p, tense, text: formText(forms(inf, tense)[p]) };
-}
-function dkSentQ(row) {
-  const [tense, inf, s, a, bg] = row;
-  return { type: 'sent', inf, tense, text: s.replace('___', a), bg };
-}
-function dkBuild() {
+/* a round of forms and sentences for cfg = { kind: mix | form | sent, count, tenses, groups } */
+function mixedRound(cfg, formQ, sentQ) {
   const formPool = [];
   Object.keys(VERB).forEach(inf => {
-    if (!dk.groups.has(VERB[inf].g)) return;
-    dk.tenses.forEach(t => { for (let p = 0; p < 6; p++) formPool.push([inf, p, t]); });
+    if (!cfg.groups.has(VERB[inf].g)) return;
+    cfg.tenses.forEach(t => { for (let p = 0; p < 6; p++) formPool.push([inf, p, t]); });
   });
-  const sentPool = dkSentPool();
+  const sentPool = sentPoolOf(cfg);
   shuffle(formPool);
   shuffle(sentPool);
-  let nS = dk.kind === 'form' ? 0 : dk.kind === 'sent' ? dk.count : Math.round(dk.count / 2);
+  let nS = cfg.kind === 'form' ? 0 : cfg.kind === 'sent' ? cfg.count : Math.round(cfg.count / 2);
   nS = Math.min(nS, sentPool.length);
-  const nF = dk.kind === 'sent' ? 0 : dk.count - nS;
+  const nF = cfg.kind === 'sent' ? 0 : cfg.count - nS;
 
   // one form per verb before any verb repeats
-  const fq = [];
+  const picked = [];
   const used = new Set();
-  for (const [inf, p, t] of formPool) {
-    if (fq.length >= nF) break;
-    if (used.has(inf)) continue;
-    used.add(inf);
-    fq.push(dkFormQ(inf, p, t));
+  for (const f of formPool) {
+    if (picked.length >= nF) break;
+    if (used.has(f[0])) continue;
+    used.add(f[0]);
+    picked.push(f);
   }
-  for (const [inf, p, t] of formPool) {
-    if (fq.length >= nF) break;
-    if (!fq.some(q => q.inf === inf && q.p === p && q.tense === t)) fq.push(dkFormQ(inf, p, t));
+  for (const f of formPool) {
+    if (picked.length >= nF) break;
+    if (!picked.includes(f)) picked.push(f);
   }
-  return shuffle(sentPool.slice(0, nS).map(dkSentQ).concat(fq));
+  return shuffle(sentPool.slice(0, nS).map(sentQ).concat(picked.map(([inf, p, t]) => formQ(inf, p, t))));
+}
+function dkSentPool() {
+  return sentPoolOf(dk);
+}
+function dkBuild() {
+  return mixedRound(dk,
+    (inf, p, tense) => ({ type: 'form', inf, p, tense, text: formText(forms(inf, tense)[p]) }),
+    ([tense, inf, s, a, bg]) => ({ type: 'sent', inf, tense, text: s.replace('___', a), bg }));
 }
 
 /* ---------- comparing what was written ---------- */
-/* Word by word, ignoring capitals and punctuation. Each expected word is
-   ok, near (only accents differ) or bad (missing or misspelled); extra words count as mistakes. */
+const dkSepless = w => w.replace(/['-]/g, '');
+/* "week end", "qu est-ce": every way of writing a hyphen or apostrophe as a space */
+function dkSpaced(key) {
+  let out = [''];
+  for (const ch of key) {
+    out = ch === "'" || ch === '-' ? out.flatMap(o => [o + ch, o + ' ']) : out.map(o => o + ch);
+  }
+  return out.filter(f => f.includes(' '));
+}
+const dkSame = w => DK_SAME[w] || w;
+
+/* Word by word, ignoring capitals and punctuation. Each expected word is ok,
+   near (only an accent, hyphen or apostrophe differs) or bad. A misspelled word
+   counts once; missing and extra words count too. */
 function dkCompare(expected, given) {
   const exp = expected.split(/\s+/).filter(Boolean).map(show => ({ show, key: norm(show).replace(DK_PUNCT, '') }));
   const ek = exp.filter(t => t.key);
-  const g = norm(given).replace(DK_PUNCT, ' ').split(' ').filter(Boolean);
-  const a = ek.map(t => strip(t.key));
-  const b = g.map(w => strip(w));
+  let gt = ' ' + norm(given).replace(DK_PUNCT, ' ').replace(/(\d+)\s*h\b/g, '$1 heures')
+    .replace(/\d+/g, d => DK_NUM[d] || d).replace(/\s+/g, ' ') + ' ';
+  ek.forEach(t => {
+    if (/['-]/.test(t.key)) dkSpaced(t.key).forEach(f => { gt = gt.split(' ' + f + ' ').join(' ' + dkSepless(t.key) + ' '); });
+  });
+  const g = gt.split(' ').filter(Boolean).map(dkSame);
+  const a = ek.map(t => strip(dkSepless(t.key)));
+  const b = g.map(w => strip(dkSepless(w)));
   const n = a.length, m = b.length;
   // longest common subsequence, so one missing word does not mark the rest as wrong
   const L = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
@@ -80,27 +105,34 @@ function dkCompare(expected, given) {
       L[i][j] = a[i] === b[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
     }
   }
-  const usedG = new Array(m).fill(false);
-  let i = 0, j = 0;
+  const gs = g.map(w => ({ w, st: null }));
+  let bad = 0, i = 0, j = 0, gi = [], gj = [];
+  // words between two matches: pair them up as misspellings, the rest are missing or extra
+  const gap = () => {
+    gi.forEach(k => { ek[k].st = 'bad'; });
+    gj.forEach((k, x) => { gs[k].st = x < gi.length ? 'wrong' : 'extra'; });
+    bad += Math.max(gi.length, gj.length);
+    gi = [];
+    gj = [];
+  };
   while (i < n && j < m) {
     if (a[i] === b[j]) {
-      ek[i].st = ek[i].key === g[j] ? 'ok' : 'near';
-      usedG[j] = true;
+      gap();
+      const e = ek[i].key, w = g[j];
+      if (e === w) ek[i].st = 'ok';
+      else if (dkSepless(e) !== dkSepless(w) && accentMatters(e, w)) { ek[i].st = 'bad'; gs[j].st = 'wrong'; bad++; }
+      else ek[i].st = 'near';
       i++; j++;
     } else if (L[i + 1][j] >= L[i][j + 1]) {
-      ek[i].st = 'bad'; i++;
+      gi.push(i++);
     } else {
-      j++;
+      gj.push(j++);
     }
   }
-  for (; i < n; i++) ek[i].st = 'bad';
-  const extra = g.filter((w, k) => !usedG[k]);
-  return {
-    exp,
-    given: g.map((w, k) => ({ w, extra: !usedG[k] })),
-    bad: ek.filter(t => t.st === 'bad').length + extra.length,
-    near: ek.filter(t => t.st === 'near').length
-  };
+  while (i < n) gi.push(i++);
+  while (j < m) gj.push(j++);
+  gap();
+  return { exp, given: gs, bad, near: ek.filter(t => t.st === 'near').length };
 }
 /* the accepted spelling closest to what was written (allé / allée / allés …) */
 function dkBest(q, given) {
@@ -117,12 +149,14 @@ function dkAnswerButton(q, r) {
   b.setAttribute('aria-label', 'Произнеси: ' + said);
   b.innerHTML = ICON;
   const s = el('span');
+  // brackets never change the spaces, so the words of q.text line up with the variant's
+  const shown = q.text.split(/\s+/).filter(Boolean);
   r.exp.forEach((t, k) => {
     if (k) s.append(' ');
-    s.appendChild(el('span', t.st ? 'dk-' + t.st : null, t.show));
+    s.appendChild(el('span', t.st ? 'dk-' + t.st : null, shown[k] || t.show));
   });
   b.appendChild(s);
-  b.addEventListener('click', () => speak(said, b));
+  b.addEventListener('click', () => speak(said, b, DK_NORMAL));
   return b;
 }
 function dkGivenLine(r) {
@@ -131,7 +165,7 @@ function dkGivenLine(r) {
   const s = el('span');
   r.given.forEach((t, k) => {
     if (k) s.append(' ');
-    s.appendChild(el('span', t.extra ? 'dk-extra' : null, t.w));
+    s.appendChild(el('span', t.st === 'extra' ? 'dk-extra' : t.st === 'wrong' ? 'dk-bad' : null, t.w));
   });
   p.appendChild(s);
   return p;
@@ -178,7 +212,7 @@ function dkStart(qs, play) {
 function dkPlay(rate, btn) {
   const q = dk.qs[dk.i];
   if (!q || !dk.ui) return;
-  speak(spoken(q.text), btn || dk.ui.play, rate);
+  speak(spoken(q.text), btn || dk.ui.play, rate || DK_NORMAL);
 }
 
 function dkRenderQ(play) {
@@ -195,7 +229,7 @@ function dkRenderQ(play) {
 
   const top = el('div', 'qtop');
   const scoreEl = el('span', null, 'Верни: ' + dk.score);
-  top.append(el('span', null, 'Диктовка ' + (dk.i + 1) + ' от ' + dk.qs.length), scoreEl);
+  top.append(el('span', null, 'Въпрос ' + (dk.i + 1) + ' от ' + dk.qs.length), scoreEl);
   const prog = el('div', 'progress');
   const bar = el('i');
   bar.style.width = (dk.i / dk.qs.length * 100) + '%';
@@ -233,7 +267,13 @@ function dkRenderQ(play) {
   input.setAttribute('enterkeyhint', 'go');
   input.setAttribute('lang', 'fr');
   input.setAttribute('aria-label', q.type === 'sent' ? 'Напиши изречението, което чу' : 'Напиши формата, която чу, с местоимението');
-  input.placeholder = q.type === 'sent' ? 'Напиши изречението' : 'напр. je joue';
+  input.placeholder = 'Напиши каквото чуваш';
+  if (q.type === 'sent') {
+    // grow with the text, so a long sentence is never cut off
+    const grow = () => { input.style.height = 'auto'; input.style.height = input.scrollHeight + 'px'; };
+    input.addEventListener('input', grow);
+    requestAnimationFrame(grow);
+  }
   card.appendChild(input);
 
   const keys = el('div', 'keys');
@@ -304,17 +344,22 @@ function dkCheck(ui, gaveUp) {
   ui.bar.style.width = ((dk.i + 1) / dk.qs.length * 100) + '%';
 
   const verdict = exact ? ['ok', 'Правилно!']
-    : near ? ['near', 'Почти! Внимавай за знаците над буквите.']
-    : gaveUp ? ['bad', 'Ето текста:'] : ['bad', r.bad === 1 ? 'Една грешка.' : 'Грешки: ' + r.bad + '.'];
-  const answer = dkAnswerButton(q, r);
+    : near ? ['near', 'Почти! Внимавай за знаците над буквите и тиретата.']
+    : gaveUp ? ['bad', 'Ето текста:'] : ['bad', r.bad === 1 ? 'Една грешка.' : r.bad + ' грешки.'];
+  const answer = dkAnswerButton(q, gaveUp ? { exp: r.exp.map(t => ({ show: t.show })) } : r);
   const parts = [el('p', 'verdict ' + verdict[0], verdict[1]), answer];
   if (!exact && !gaveUp) parts.push(dkGivenLine(r));
-  if (!exact && /\(/.test(q.text)) parts.push(el('p', 'fb-line', 'В скобите е окончанието за женски род или множествено число: allé, allée, allés.'));
+  if (r.bad && r.near && !gaveUp) parts.push(el('p', 'fb-line', 'Вълнообразно подчертаното се зачита: липсва само знак над буквата или тире.'));
+  const bracketed = q.text.split(/\s+/).find(x => x.includes('('));
+  if (!exact && bracketed) {
+    parts.push(el('p', 'fb-line', 'Окончанието в скобите зависи от рода и числото. Тук са верни: ' + variants(bracketed.replace(DK_PUNCT, '')).join(', ') + '.'));
+  }
+  if (gaveUp) ui.input.placeholder = '';
   ui.fb.replaceChildren(...parts);
   ui.fb.hidden = false;
   ui.main.focus({ preventScroll: true });
   ui.fb.scrollIntoView({ block: 'nearest' });
-  speak(spoken(q.text), answer);
+  speak(spoken(q.text), answer, DK_NORMAL);
 }
 
 function dkNext() {
@@ -341,7 +386,7 @@ function dkResult() {
   const [fr, bg] = pct >= 0.9 ? ['Excellent !', 'Отличен слух.']
     : pct >= 0.7 ? ['Très bien !', 'Много добре.']
     : pct >= 0.5 ? ['Pas mal.', 'Добре, още малко упражнения.']
-    : ['Courage !', 'Слушай бавно и опитай пак.'];
+    : ['Courage !', 'Слушай с бутона „Бавно“ и опитай пак.'];
   msg.append(el('i', null, fr), document.createTextNode(' ' + bg));
   card.appendChild(msg);
 
@@ -352,12 +397,8 @@ function dkResult() {
     dk.wrong.forEach(({ q, given, r }) => {
       const li = el('li');
       li.appendChild(el('span', 'm-prompt', (q.type === 'form' ? 'Форма' : 'Изречение') + ' · ' + TENSE[q.tense].label));
-      if (given) {
-        const g = el('span', 'm-prompt');
-        g.append(document.createTextNode('Ти написа: '), el('span', 'given', given));
-        li.appendChild(g);
-      }
-      li.appendChild(dkAnswerButton(q, r));
+      li.appendChild(dkAnswerButton(q, given ? r : { exp: r.exp.map(t => ({ show: t.show })) }));
+      if (given) li.appendChild(dkGivenLine(r));
       ul.appendChild(li);
     });
     box.appendChild(ul);
@@ -391,7 +432,10 @@ function dkResult() {
 
 /* opening the tab plays the current item; the tab click lets the browser speak */
 $('tab-dictation').addEventListener('click', () => {
-  if (!dk.done && !dk.checked && dk.ui) dkPlay();
+  if (dk.done || dk.checked || !dk.ui) return;
+  dk.ui.input.focus({ preventScroll: true });
+  dkRoot.scrollIntoView({ block: 'start' });
+  dkPlay();
 });
 
 renderDkSettings();

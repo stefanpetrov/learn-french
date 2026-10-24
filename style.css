@@ -706,8 +706,36 @@ footer, .tip {
 .dk-extra { color: var(--margin); text-decoration: line-through; }
 .dk-given { font-family: var(--f-display); }
 
-/* four tabs on a phone */
-@media (max-width: 420px) {
-  .tabs { width: 100%; }
-  .tabs button { flex: 1; padding-inline: .3rem; font-size: .9rem; }
+/* five tabs on a phone */
+@media (max-width: 480px) {
+  .tabs { width: 100%; gap: 0; }
+  .tabs button { flex: 1 1 auto; padding-inline: .2rem; font-size: .85rem; }
+}
+@media (max-width: 340px) {
+  .tabs button { font-size: .8rem; padding-inline: .1rem; }
+}
+.ans.dk-ans.bad { text-decoration: none; }
+
+/* bigger tap targets */
+.tabs button { min-height: 44px; }
+.keys button { min-width: 44px; min-height: 44px; }
+.toggle { min-height: 40px; }
+.dk-answer { min-height: 44px; }
+
+/* ---------- Pronunciation ---------- */
+.sp-text { color: var(--ink); }
+.sp-tools { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+.sp-mic, .sp-rec { display: inline-flex; align-items: center; gap: .45rem; }
+.sp-mic { font-size: 1.05rem; padding-inline: 1.4rem; min-height: 52px; }
+.sp-mic .icon { width: 1.2em; height: 1.2em; opacity: 1; }
+.sp-rec .icon { width: .8em; height: .8em; opacity: 1; color: var(--margin); }
+.sp-mic.listening, .sp-rec.listening { background: var(--margin); border-color: var(--margin); color: var(--surface); }
+.sp-rec.listening .icon { color: inherit; }
+.sp-mic.listening .icon, .sp-rec.listening .icon { animation: pulse .7s ease-in-out infinite alternate; }
+.sp-heard { font-style: italic; }
+.sp-words { margin: 0; }
+.sp-self { align-items: center; }
+.sp-self .set-note { flex: 1 1 100%; margin: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .sp-mic.listening .icon, .sp-rec.listening .icon { animation: none; }
 }
