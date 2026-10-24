@@ -267,7 +267,7 @@ const TENSE_ITEMS = TENSES.map(t => [t.id, t.label]);
 const tensesLabel = set => TENSE_IDS.filter(t => set.has(t)).map(t => TENSE[t].label).join(', ');
 function groupsLabel(set) {
   if (set.size === GROUPS.length) return null;
-  return set.size === 1 ? '1 група' : set.size + ' групи';
+  return set.size + '\u00a0' + (set.size === 1 ? 'група' : 'групи');
 }
 
 /* ---------- verb list ---------- */
@@ -532,7 +532,7 @@ function cardFaces(c) {
   } else {
     const f = forms(c.inf, c.t)[c.p];
     const head = el('div', 'qverb');
-    head.append(sayButton(c.inf, 'say'), el('span', 'meaning', v.bg));
+    head.append(sayButton(c.inf, 'say'), el('span', 'meaning', promptMeaning(c.inf)));
     const q = el('p', 'big-text');
     q.append(el('span', 'pr', f.pron.trim()), document.createTextNode(' …'));
     front.append(el('p', 'eyebrow', TENSE[c.t].label), head, q);
@@ -675,7 +675,8 @@ function renderCardsEnd() {
   const choices = el('div', 'choices');
 
   const testBtn = choiceButton(
-    one ? (cj ? 'Тест с този глагол' : 'Тест с тази дума') : 'Тест с тези ' + word,
+    cj ? (new Set(deck.map(c => c.inf)).size === 1 ? 'Тест с този глагол' : 'Тест с тези глаголи')
+      : (one ? 'Тест с тази дума' : 'Тест с тези думи'),
     (cj ? (one ? 'Пишеш същата форма' : 'Пишеш същите форми') : 'Виждаш значението и пишеш глагола на френски') + ' · ' + questionsWord(n),
     () => startTestFromCards(deck), true);
   const againBtn = choiceButton(
@@ -699,7 +700,8 @@ function renderCardsEnd() {
   let newBtn;
   if (repeats === next.length) {
     newBtn = choiceButton('Още ' + word,
-      'Няма други ' + word + ' с тези настройки. Отвори Настройки и добави групи.',
+      cj ? 'Няма други карти с тези настройки. Отвори Настройки и добави времена или групи.'
+        : 'Няма други думи с тези настройки. Отвори Настройки и добави групи.',
       () => {
         const set = $('c-settings');
         set.open = true;
@@ -714,6 +716,7 @@ function renderCardsEnd() {
     if (repeats) parts.push(repeats + '\u00a0от досегашните');
     let desc;
     if (fresh.length === next.length) desc = cardsWord(next.length) + ' с ' + (cj ? verbsTxt : 'други думи');
+    else if (otherForms === next.length) desc = cardsWord(next.length) + ' с други форми на същите глаголи';
     else desc = cardsWord(next.length) + ': ' + parts.join(', ');
     newBtn = choiceButton(fresh.length ? 'Нови ' + word : 'Други форми', desc, () => startCards(next));
   }
@@ -828,8 +831,8 @@ function renderSettings() {
   renderSum();
 }
 function renderSum() {
-  if (st.fromCards) {
-    $('set-sum').textContent = 'По картите · ' + questionsWord(st.qs.length);
+  if (st.fromCards || st.retry) {
+    $('set-sum').textContent = (st.fromCards ? 'По картите · ' : 'Грешките · ') + questionsWord(st.qs.length);
     return;
   }
   // only "Изречения" can run short: few sentences for some groups and tenses
@@ -849,6 +852,7 @@ const quiz = $('quiz');
 function startRound(qs, focus, fromCards) {
   stopAll();
   st.fromCards = !!fromCards;
+  st.retry = !!qs && !fromCards;
   st.qs = qs || buildRound();
   renderSum();
   st.i = 0;
@@ -888,7 +892,7 @@ function renderQ(focus) {
   if (q.type === 'conj') {
     input.setAttribute('aria-label', 'Формата на ' + q.inf + ' за ' + q.pron.trim() + ' в ' + tl);
     const head = el('div', 'qverb');
-    head.append(sayButton(q.inf, 'say'), el('span', 'meaning', VERB[q.inf].bg));
+    head.append(sayButton(q.inf, 'say'), el('span', 'meaning', promptMeaning(q.inf)));
     const line = el('p', 'qline');
     if (q.pron) line.appendChild(el('span', 'pr', q.pron));
     line.appendChild(input);
@@ -1083,7 +1087,12 @@ function renderResult() {
   card.appendChild(actions);
 
   quiz.replaceChildren(card);
-  actions.querySelector('.primary').focus({ preventScroll: true });
+  if (st.wrong.length) {
+    card.tabIndex = -1;
+    card.focus({ preventScroll: true });
+  } else {
+    actions.querySelector('.primary').focus({ preventScroll: true });
+  }
   card.scrollIntoView({ block: 'nearest' });
 }
 
