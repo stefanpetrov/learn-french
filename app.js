@@ -462,18 +462,42 @@ $('c-reset').addEventListener('click', () => {
   startCards();
 });
 
-function startCards(list) {
-  stopAll();
-  let deck = list;
-  if (!deck) {
-    // least known first, random within the same level
-    deck = shuffle(cardPool())
-      .map(c => [c, boxes[c.key] || 0])
-      .sort((a, b) => a[1] - b[1])
-      .slice(0, cs.count)
-      .map(x => x[0]);
-    shuffle(deck);
+/* Pick a deck: least known cards first (random within the same level),
+   one card per verb before any verb repeats. Verbs in skipInf are left out
+   when there are other verbs to choose from. */
+function pickDeck(skipInf) {
+  let pool = cardPool();
+  if (skipInf && skipInf.size) {
+    const rest = pool.filter(c => !skipInf.has(c.inf));
+    if (rest.length) pool = rest;
   }
+  const ranked = shuffle(pool)
+    .map(c => [c, boxes[c.key] || 0])
+    .sort((a, b) => a[1] - b[1])
+    .map(x => x[0]);
+  const deck = [];
+  const used = new Set();
+  for (const c of ranked) {
+    if (deck.length >= cs.count) break;
+    if (used.has(c.inf)) continue;
+    used.add(c.inf);
+    deck.push(c);
+  }
+  for (const c of ranked) {
+    if (deck.length >= cs.count) break;
+    if (!deck.includes(c)) deck.push(c);
+  }
+  return shuffle(deck);
+}
+/* verbs outside skipInf that the current settings can still offer */
+function otherVerbCount(skipInf) {
+  return new Set(cardPool().filter(c => !skipInf.has(c.inf)).map(c => c.inf)).size;
+}
+
+function startCards(list, skipInf) {
+  stopAll();
+  const deck = list || pickDeck(skipInf);
+  cs.deck = deck.slice();
   cs.queue = deck.slice();
   cs.total = deck.length;
   cs.done = 0;
@@ -624,22 +648,55 @@ function renderCardsEnd() {
     document.createTextNode('Научени карти: ' + knownCount(pool) + ' от ' + pool.length + '. Една карта е научена, когато я знаеш ' + KNOWN_BOX + ' пъти подред.'));
   box.appendChild(msg);
 
-  const actions = el('div', 'actions');
-  if (cs.missedCards.length) {
-    const retry = el('button', 'btn', 'Пак трудните');
-    retry.type = 'button';
-    const list = cs.missedCards.slice();
-    retry.addEventListener('click', () => startCards(shuffle(list)));
-    actions.appendChild(retry);
+  // what next: test these words, replay the same cards, or a new set of words
+  const deck = cs.deck.slice();
+  const missed = cs.missedCards.slice();
+  const deckInf = new Set(deck.map(c => c.inf));
+  const others = otherVerbCount(deckInf);
+  const word = cs.kind === 'cj' ? 'глаголи' : 'думи';
+
+  box.appendChild(el('h3', 'next-title', 'Какво следва?'));
+  const choices = el('div', 'choices');
+  const testBtn = choiceButton('Тест с тези ' + word,
+    n + ' ' + (n === 1 ? 'въпрос' : 'въпроса') + ' за картите, които току-що мина',
+    () => startTestFromCards(deck), true);
+  const againBtn = choiceButton('Пак същите карти',
+    'Изиграй отново същите ' + n + ' карти',
+    () => startCards(shuffle(deck.slice())));
+  const newBtn = choiceButton('Нова група ' + word,
+    others ? cs.count + ' карти с други ' + word
+      : 'Няма други ' + word + ' с тези настройки, затова ще са същите в нов ред. Добави групи от Настройки.',
+    () => startCards(null, deckInf));
+  choices.append(testBtn, againBtn);
+  if (missed.length) {
+    const hard = el('button', 'linkbtn choice-sub', 'Само трудните (' + missed.length + ')');
+    hard.type = 'button';
+    hard.addEventListener('click', () => startCards(shuffle(missed.slice())));
+    choices.appendChild(hard);
   }
-  const fresh = el('button', 'btn primary', 'Нови карти');
-  fresh.type = 'button';
-  fresh.addEventListener('click', () => startCards());
-  actions.appendChild(fresh);
-  box.appendChild(actions);
+  choices.appendChild(newBtn);
+  box.appendChild(choices);
+
   cardsRoot.replaceChildren(box);
   renderCardSettings();
-  fresh.focus({ preventScroll: true });
+  testBtn.focus({ preventScroll: true });
+}
+
+function choiceButton(title, desc, onClick, primary) {
+  const b = el('button', 'choice' + (primary ? ' primary' : ''));
+  b.type = 'button';
+  b.append(el('span', 'choice-title', title), el('span', 'choice-desc', desc));
+  b.addEventListener('click', onClick);
+  return b;
+}
+
+/* a test round made of the cards just played */
+function cardQuestion(c) {
+  return c.kind === 'cj' ? conjQ(c.inf, c.p, c.t) : wordQ(c.inf);
+}
+function startTestFromCards(deck) {
+  showView('test');
+  startRound(shuffle(deck.map(cardQuestion)), true, true);
 }
 
 document.addEventListener('keydown', e => {
@@ -670,6 +727,10 @@ function saveSettings() {
 function conjQ(inf, p, tense) {
   const f = forms(inf, tense)[p];
   return { type: 'conj', inf, p, tense, form: f, pron: f.pron, answer: formAnswer(f), full: formText(f), speak: formText(f) };
+}
+/* vocabulary question: Bulgarian meaning -> French infinitive */
+function wordQ(inf) {
+  return { type: 'word', inf, tense: null, answer: inf, speak: inf, bg: VERB[inf].bg };
 }
 function sentQ(row) {
   const [tense, inf, s, a, bg] = row;
@@ -723,8 +784,9 @@ function settingsChanged() {
 }
 
 const quiz = $('quiz');
-function startRound(qs, focus) {
+function startRound(qs, focus, fromCards) {
   stopAll();
+  st.fromCards = !!fromCards;
   st.qs = qs || buildRound();
   st.i = 0;
   st.score = 0;
@@ -739,15 +801,16 @@ function renderQ(focus) {
 
   const top = el('div', 'qtop');
   const scoreEl = el('span', null, 'Верни: ' + st.score);
-  top.append(el('span', null, 'Въпрос ' + (st.i + 1) + ' от ' + st.qs.length), scoreEl);
+  top.append(el('span', null, 'Въпрос ' + (st.i + 1) + ' от ' + st.qs.length + (st.fromCards ? ' · от картите' : '')), scoreEl);
   const prog = el('div', 'progress');
   const bar = el('i');
   bar.style.width = (st.i / st.qs.length * 100) + '%';
   prog.appendChild(bar);
   card.append(top, prog);
 
-  const tl = TENSE[q.tense].label;
-  card.appendChild(el('p', 'eyebrow kind', q.type === 'conj' ? 'Спрегни в ' + tl : 'Попълни глагола в ' + tl));
+  const tl = q.tense ? TENSE[q.tense].label : '';
+  card.appendChild(el('p', 'eyebrow kind', q.type === 'conj' ? 'Спрегни в ' + tl
+    : q.type === 'sent' ? 'Попълни глагола в ' + tl : 'Как е на френски?'));
 
   const input = el('input', 'ans' + (q.tense !== 'pr' ? ' wide' : ''));
   input.id = 'answer';
@@ -767,6 +830,11 @@ function renderQ(focus) {
     if (q.pron) line.appendChild(el('span', 'pr', q.pron));
     line.appendChild(input);
     card.append(head, line);
+  } else if (q.type === 'word') {
+    input.setAttribute('aria-label', 'Френският глагол за „' + q.bg + '“');
+    const line = el('p', 'qline');
+    line.appendChild(input);
+    card.append(el('p', 'big-text', q.bg), line);
   } else {
     input.setAttribute('aria-label', 'Глаголът ' + q.inf + ' в изречението');
     const p = el('p', 'sentence');
@@ -827,7 +895,9 @@ function insertChar(input, ch) {
 }
 
 function answerFeedback(q) {
-  return q.type === 'conj' ? formButton(q.form) : sentenceButton(q.before, q.answer, q.after);
+  if (q.type === 'conj') return formButton(q.form);
+  if (q.type === 'word') return sayButton(q.inf, 'form');
+  return sentenceButton(q.before, q.answer, q.after);
 }
 
 function check(ui, gaveUp) {
@@ -836,7 +906,9 @@ function check(ui, gaveUp) {
   const val = gaveUp ? '' : ui.input.value;
   if (!gaveUp && !val.trim()) { ui.input.focus(); return; }
 
-  const base = q.type === 'conj' ? [q.answer, q.full] : [q.answer];
+  // a reflexive verb also counts without its pronoun: appeler for s'appeler
+  const base = q.type === 'conj' ? [q.answer, q.full]
+    : q.type === 'word' ? [q.answer, bareInf(q.answer)] : [q.answer];
   const cands = base.concat(...base.map(variants));
   const exact = !gaveUp && cands.some(c => norm(c) === norm(val));
   const near = !gaveUp && !exact && cands.some(c => strip(c) === strip(val));
@@ -857,7 +929,7 @@ function check(ui, gaveUp) {
     : near ? ['near', 'Почти! Внимавай за знаците над буквите.']
     : gaveUp ? ['bad', 'Ето отговора:'] : ['bad', 'Грешно.'];
   const line = el('p', 'fb-line');
-  if (q.type === 'conj') line.appendChild(el('span', null, 'Правилно е'));
+  if (q.type !== 'sent') line.appendChild(el('span', null, 'Правилно е'));
   const sayBtn = answerFeedback(q);
   line.appendChild(sayBtn);
   ui.fb.replaceChildren(el('p', 'verdict ' + verdict[0], verdict[1]), line);
@@ -904,8 +976,9 @@ function renderResult() {
     st.wrong.forEach(({ q, given }) => {
       const li = el('li');
       const prompt = el('span', 'm-prompt');
-      const tl = TENSE[q.tense].label;
+      const tl = q.tense ? TENSE[q.tense].label : '';
       if (q.type === 'conj') prompt.textContent = q.inf + ' → ' + q.pron + '___ · ' + tl;
+      else if (q.type === 'word') prompt.textContent = q.bg + ' → ___';
       else prompt.textContent = q.before + '___' + q.after + ' (' + q.inf + ') · ' + tl;
       li.appendChild(prompt);
       if (given) {
@@ -925,8 +998,15 @@ function renderResult() {
     const retry = el('button', 'btn', 'Повтори грешните');
     retry.type = 'button';
     const again = st.wrong.map(w => w.q);
-    retry.addEventListener('click', () => startRound(shuffle(again.slice()), true));
+    const fromCards = st.fromCards;
+    retry.addEventListener('click', () => startRound(shuffle(again.slice()), true, fromCards));
     actions.appendChild(retry);
+  }
+  if (st.fromCards) {
+    const back = el('button', 'btn', 'Към картите');
+    back.type = 'button';
+    back.addEventListener('click', () => { showView('cards'); cardsRoot.scrollIntoView({ block: 'nearest' }); });
+    actions.appendChild(back);
   }
   const fresh = el('button', 'btn primary', 'Нов тест');
   fresh.type = 'button';

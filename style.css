@@ -640,3 +640,42 @@ footer, .tip {
   .tabs button { padding-inline: .95rem; }
   .face { --m: 1.9rem; padding-left: calc(var(--m) + .9rem); }
 }
+
+/* ---------- After a card round: what next ---------- */
+.next-title {
+  margin: .25rem 0 -.4rem;
+  font-family: var(--f-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 1.1rem;
+}
+.choices { display: grid; gap: .5rem; }
+.choice {
+  font: inherit;
+  text-align: left;
+  color: var(--fg);
+  background: var(--paper);
+  border: 1px solid var(--rule-strong);
+  border-radius: 10px;
+  padding: .75rem 2.4rem .75rem 1rem;
+  min-height: 44px;
+  cursor: pointer;
+  display: grid;
+  gap: .15rem;
+  position: relative;
+}
+.choice::after {
+  content: '→';
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+}
+.choice:hover { border-color: var(--ink); }
+.choice.primary { border-color: var(--ink); background: var(--ink-soft); }
+.choice.primary::after { color: var(--ink); }
+.choice-title { font-weight: 600; }
+.choice.primary .choice-title { color: var(--ink); }
+.choice-desc { font-size: .86rem; color: var(--muted); }
+.choice-sub { justify-self: start; font-size: .88rem; margin: -.15rem 0 .2rem 1rem; min-height: 32px; }
