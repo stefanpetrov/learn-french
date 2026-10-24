@@ -1,0 +1,1393 @@
+<!doctype html><html lang="bg"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Verbes des loisirs</title>
+<meta name="description" content="Френски глаголи в сегашно време: спрежения с произношение и тест.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="theme-color" content="#2640a6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Français">
+<style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,500&family=Onest:wght@400;500;600&display=swap">
+<style>
+/* Layout: one column like a French school cahier — Seyès-ruled header with red margin, two views (verb list / test), endings and grades in red "teacher's ink" */
+:root {
+  --paper: #fafbfe;
+  --surface: #ffffff;
+  --fg: #1b2140;
+  --muted: #5d6589;
+  --ink: #2640a6;
+  --ink-soft: #e9edfb;
+  --rule: #dce1f2;
+  --rule-strong: #bcc6e8;
+  --margin: #c9353c;
+  --ok: #1d7a4c;
+  --warn: #9a6200;
+  --f-display: 'Literata', Georgia, 'Times New Roman', serif;
+  --f-body: 'Onest', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #11152a; --surface: #171c35; --fg: #e4e8f6; --muted: #9ba4c8;
+    --ink: #9db1ff; --ink-soft: #222a4c; --rule: #262e52; --rule-strong: #38427a; --margin: #ff7c81;
+    --ok: #63d49d; --warn: #f2b65a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #11152a; --surface: #171c35; --fg: #e4e8f6; --muted: #9ba4c8;
+  --ink: #9db1ff; --ink-soft: #222a4c; --rule: #262e52; --rule-strong: #38427a; --margin: #ff7c81;
+  --ok: #63d49d; --warn: #f2b65a;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: var(--paper);
+  color: var(--fg);
+  font-family: var(--f-body);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+.wrap {
+  max-width: 44rem;
+  margin-inline: auto;
+  padding-inline: 16px;
+  padding-block: 16px 48px;
+}
+
+/* Header on Seyès ruled paper */
+.cahier {
+  --m: 2.25rem;
+  position: relative;
+  border: 1px solid var(--rule-strong);
+  border-radius: 6px;
+  padding-block: 1.5rem 1.25rem;
+  padding-inline: calc(var(--m) + 1rem) 1.25rem;
+  background-color: var(--surface);
+  background-image:
+    linear-gradient(to right, transparent var(--m), var(--margin) var(--m), var(--margin) calc(var(--m) + 2px), transparent calc(var(--m) + 2px)),
+    repeating-linear-gradient(to bottom, transparent 0 31px, var(--rule-strong) 31px 32px),
+    repeating-linear-gradient(to right, transparent 0 31px, var(--rule) 31px 32px),
+    repeating-linear-gradient(to bottom, transparent 0 7px, var(--rule) 7px 8px);
+  display: grid;
+  gap: .5rem;
+}
+.eyebrow {
+  margin: 0;
+  font-size: .75rem;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--margin);
+}
+h1 {
+  margin: 0;
+  font-family: var(--f-display);
+  font-weight: 600;
+  font-size: clamp(1.9rem, 6vw, 2.6rem);
+  line-height: 1.1;
+  color: var(--ink);
+  text-wrap: balance;
+}
+.lede { margin: 0; max-width: 34rem; }
+.lede .end { font-weight: 600; }
+.meta { margin: 0; font-size: .85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.hint {
+  margin-top: 1rem;
+  padding: .75rem 1rem;
+  border-radius: 8px;
+  background: var(--ink-soft);
+  font-size: .9rem;
+}
+
+/* View tabs */
+.tabs {
+  margin-top: 1rem;
+  display: flex;
+  gap: .25rem;
+  padding: .25rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  width: fit-content;
+  max-width: 100%;
+}
+.tabs button {
+  font: inherit;
+  font-weight: 600;
+  font-size: .95rem;
+  border: 0;
+  border-radius: 999px;
+  padding: .5rem 1.3rem;
+  min-height: 40px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.tabs button[aria-selected="true"] { background: var(--ink); color: var(--surface); }
+
+/* Sticky bar */
+.bar {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 5;
+  margin-top: .75rem;
+  background: var(--paper);
+  border-bottom: 1px solid var(--rule-strong);
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding-block: .6rem;
+}
+.chips {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: .4rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.chips::-webkit-scrollbar { display: none; }
+.chips a {
+  flex: none;
+  font-size: .85rem;
+  font-weight: 500;
+  color: var(--fg);
+  text-decoration: none;
+  padding: .35rem .7rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  white-space: nowrap;
+}
+.chips a:hover { border-color: var(--ink); color: var(--ink); }
+.speed {
+  flex: none;
+  display: flex;
+  border: 1px solid var(--rule-strong);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.speed button {
+  font: inherit;
+  font-size: .8rem;
+  font-weight: 500;
+  border: 0;
+  padding: .35rem .7rem;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+}
+.speed button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+
+/* Sections */
+section { scroll-margin-top: 4.5rem; padding-top: 2rem; }
+.sec-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: .6rem;
+  border-bottom: 1px solid var(--rule-strong);
+}
+.sec-head > div { min-width: 0; }
+h2 {
+  margin: 0;
+  font-family: var(--f-display);
+  font-weight: 600;
+  font-size: 1.4rem;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+.sub { margin: .25rem 0 0; color: var(--muted); font-size: .92rem; }
+.play {
+  flex: none;
+  font: inherit;
+  font-size: .82rem;
+  font-weight: 600;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--rule-strong);
+  border-radius: 999px;
+  padding: .4rem .8rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  min-height: 36px;
+}
+.play.playing { border-color: var(--margin); color: var(--margin); }
+
+/* Verb rows */
+.verb {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr) auto;
+  column-gap: .75rem;
+  row-gap: .25rem;
+  align-items: center;
+  padding-block: .6rem .7rem;
+  border-bottom: 1px solid var(--rule);
+}
+.meaning { min-width: 0; color: var(--fg); }
+.say {
+  font-family: var(--f-display);
+  font-weight: 600;
+  font-size: 1.15rem;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  padding: .3rem .4rem;
+  margin-left: -.4rem;
+  min-height: 40px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  text-align: left;
+  max-width: 100%;
+}
+.say:hover, .form:hover { background: var(--ink-soft); }
+.vplay {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid var(--rule-strong);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.vplay svg { width: 14px; height: 14px; }
+.vplay.playing { border-color: var(--margin); color: var(--margin); }
+
+.conj {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(3, auto);
+  grid-auto-flow: column;
+  column-gap: .75rem;
+}
+.form {
+  font: inherit;
+  font-size: .95rem;
+  color: var(--fg);
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  padding: .25rem .4rem;
+  margin-left: -.4rem;
+  min-height: 34px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  text-align: left;
+  min-width: 0;
+}
+.form > span { min-width: 0; overflow-wrap: anywhere; }
+.pr { color: var(--muted); }
+.end { color: var(--margin); font-weight: 600; }
+
+.chip {
+  font-family: var(--f-body);
+  font-size: .86rem;
+  font-weight: 500;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--rule-strong);
+  border-radius: 999px;
+  padding: .3rem .7rem;
+  min-height: 34px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+}
+.chip:hover { border-color: var(--ink); }
+.icon { width: 1em; height: 1em; flex: none; opacity: .5; }
+.form .icon { width: .8em; height: .8em; opacity: .35; }
+.chip .icon { width: .85em; height: .85em; }
+.speaking { background: var(--ink-soft); }
+.chip.speaking { border-color: var(--margin); }
+.speaking .icon { opacity: 1; color: var(--margin); animation: pulse .7s ease-in-out infinite alternate; }
+@keyframes pulse { from { transform: scale(.85); } to { transform: scale(1.1); } }
+
+button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid var(--margin); outline-offset: 2px; }
+
+/* Notes */
+.note {
+  margin-top: 1.25rem;
+  padding: 1rem 1.1rem;
+  border-radius: 8px;
+  background: var(--ink-soft);
+  display: grid;
+  gap: .6rem;
+}
+.note h3 {
+  margin: 0;
+  font-family: var(--f-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 1.1rem;
+}
+.note-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: .75rem;
+  row-gap: .2rem;
+}
+.note-item span { color: var(--fg); font-size: .92rem; min-width: 0; }
+
+footer, .tip {
+  margin-top: 2.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule-strong);
+  color: var(--muted);
+  font-size: .85rem;
+  max-width: 34rem;
+}
+
+/* ---------- Test ---------- */
+.settings {
+  margin-top: 1rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.settings summary {
+  list-style: none;
+  cursor: pointer;
+  padding: .7rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: .75rem;
+  font-weight: 600;
+  border-radius: 10px;
+}
+.settings summary::-webkit-details-marker { display: none; }
+.settings summary .sum { color: var(--muted); font-weight: 500; font-size: .86rem; text-align: right; min-width: 0; }
+.settings summary::after { content: '▾'; color: var(--muted); flex: none; }
+.settings[open] summary::after { content: '▴'; }
+.settings-body { padding: 0 1rem 1rem; display: grid; gap: .9rem; }
+.field { display: grid; gap: .4rem; }
+.field-label {
+  font-size: .72rem;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.seg { display: flex; flex-wrap: wrap; gap: .4rem; }
+.toggle {
+  font: inherit;
+  font-size: .86rem;
+  font-weight: 500;
+  color: var(--fg);
+  background: var(--paper);
+  border: 1px solid var(--rule-strong);
+  border-radius: 999px;
+  padding: .35rem .8rem;
+  min-height: 36px;
+  cursor: pointer;
+}
+.toggle[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--surface); }
+.set-note { margin: 0; font-size: .82rem; color: var(--muted); }
+
+.qcard {
+  margin-top: 1rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: 12px;
+  background: var(--surface);
+  padding: 1.1rem 1.1rem 1rem;
+  display: grid;
+  gap: 1rem;
+}
+.qtop {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: .85rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.progress { height: 4px; background: var(--rule); border-radius: 2px; overflow: hidden; margin-top: -.6rem; }
+.progress > i { display: block; height: 100%; background: var(--ink); transition: width .3s ease; }
+.kind { margin: 0; }
+.qverb { display: flex; align-items: center; flex-wrap: wrap; column-gap: .75rem; }
+.qverb .say { font-size: 1.5rem; }
+.qline, .sentence {
+  margin: 0;
+  font-family: var(--f-display);
+  font-size: 1.25rem;
+  line-height: 2.1;
+}
+.qline .pr { font-family: var(--f-display); }
+.ans {
+  font: inherit;
+  font-family: var(--f-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--ink);
+  width: 8.5em;
+  max-width: 100%;
+  border: 0;
+  border-bottom: 2px solid var(--ink);
+  border-radius: 4px 4px 0 0;
+  background: var(--ink-soft);
+  padding: .05rem .4rem;
+  line-height: 1.5;
+}
+.ans:focus { outline: none; border-bottom-color: var(--margin); }
+.ans.ok { border-bottom-color: var(--ok); color: var(--ok); }
+.ans.near { border-bottom-color: var(--warn); color: var(--warn); }
+.ans.bad { border-bottom-color: var(--margin); color: var(--margin); text-decoration: line-through; }
+.inf-hint { font-style: italic; color: var(--muted); font-size: 1rem; }
+.bgline { margin: -.4rem 0 0; color: var(--muted); font-size: .95rem; }
+.keys { display: flex; flex-wrap: wrap; gap: .35rem; }
+.keys button {
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+  font: inherit;
+  font-family: var(--f-display);
+  font-size: 1.15rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--fg);
+  cursor: pointer;
+}
+.keys button:hover { border-color: var(--ink); }
+.feedback {
+  border-radius: 8px;
+  padding: .7rem .9rem;
+  background: var(--ink-soft);
+  display: grid;
+  gap: .25rem;
+}
+.verdict { margin: 0; font-weight: 600; }
+.verdict.ok { color: var(--ok); }
+.verdict.near { color: var(--warn); }
+.verdict.bad { color: var(--margin); }
+.fb-line { margin: 0; display: flex; flex-wrap: wrap; align-items: center; column-gap: .5rem; font-size: .92rem; color: var(--muted); }
+.feedback .form, .feedback .sbtn { font-size: 1.05rem; font-family: var(--f-display); }
+.sbtn {
+  font: inherit;
+  color: var(--fg);
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  padding: .25rem .4rem;
+  margin-left: -.4rem;
+  min-height: 34px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  text-align: left;
+}
+.sbtn:hover { background: var(--surface); }
+.sbtn .icon { width: .8em; height: .8em; opacity: .4; }
+.actions { display: flex; gap: .5rem; justify-content: flex-end; flex-wrap: wrap; }
+.btn {
+  font: inherit;
+  font-weight: 600;
+  padding: .55rem 1.2rem;
+  min-height: 44px;
+  border-radius: 999px;
+  border: 1px solid var(--rule-strong);
+  background: transparent;
+  color: var(--fg);
+  cursor: pointer;
+}
+.btn.primary { background: var(--ink); border-color: var(--ink); color: var(--surface); }
+
+.result-head { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: .5rem 1.5rem; }
+.score {
+  margin: 0;
+  font-family: var(--f-display);
+  font-weight: 600;
+  font-size: 3.2rem;
+  line-height: 1;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.score small { font-size: 1.3rem; color: var(--muted); font-weight: 400; }
+.grade {
+  margin: 0;
+  font-family: var(--f-display);
+  font-style: italic;
+  font-size: 1.6rem;
+  color: var(--margin);
+  transform: rotate(-4deg);
+  border: 2px solid var(--margin);
+  border-radius: 999px;
+  padding: .1rem .9rem;
+}
+.result-msg { margin: 0; font-size: 1.05rem; }
+.result-msg i { font-family: var(--f-display); }
+.mistakes h3 { margin: 0 0 .3rem; font-family: var(--f-display); font-style: italic; font-weight: 500; font-size: 1.1rem; }
+.mistakes ul { list-style: none; margin: 0; padding: 0; }
+.mistakes li { border-top: 1px solid var(--rule); padding-block: .55rem; display: grid; gap: .1rem; }
+.m-prompt { color: var(--muted); font-size: .9rem; }
+.given { color: var(--margin); text-decoration: line-through; }
+
+@media (prefers-reduced-motion: reduce) {
+  .speaking .icon { animation: none; }
+  .progress > i { transition: none; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+@media (max-width: 420px) {
+  .cahier { --m: 1.9rem; padding-inline: calc(var(--m) + .9rem) 1rem; }
+  .speed button { padding: .35rem .55rem; }
+  .form { font-size: .9rem; gap: .3rem; }
+  .conj { column-gap: .5rem; }
+  .qcard { padding-inline: .9rem; }
+  .qline, .sentence { font-size: 1.15rem; }
+}
+</style>
+
+<div class="wrap">
+  <header class="cahier">
+    <p class="eyebrow">Thème 2 · Les loisirs · Présent</p>
+    <h1>Verbes des loisirs</h1>
+    <p class="lede">Глаголите от урока в сегашно време. Чукни дума или форма, за да я чуеш. Окончанията са в <span class="end">червено</span>.</p>
+    <p class="meta" id="meta"></p>
+  </header>
+
+  <div class="hint" id="hint" hidden></div>
+
+  <div class="tabs" role="tablist" aria-label="Изглед">
+    <button type="button" role="tab" id="tab-verbs" aria-controls="view-verbs" aria-selected="true">Глаголи</button>
+    <button type="button" role="tab" id="tab-test" aria-controls="view-test" aria-selected="false">Тест</button>
+  </div>
+
+  <div id="view-verbs" role="tabpanel" aria-labelledby="tab-verbs">
+    <nav class="bar" aria-label="Групи глаголи">
+      <div class="chips" id="chips"></div>
+      <div class="speed" role="group" aria-label="Скорост на произношението">
+        <button type="button" id="spd-normal" aria-pressed="true">Нормално</button>
+        <button type="button" id="spd-slow" aria-pressed="false">Бавно</button>
+      </div>
+    </nav>
+
+    <main id="groups"></main>
+
+    <footer>
+      Лявата колона е единствено число (je, tu, il), дясната е множествено (nous, vous, ils). Бутонът ▶ до всеки глагол прочита цялото спрежение. Гласът е вграден в телефона: ако не чуваш нищо, увеличи звука и провери дали телефонът не е в тих режим.
+    </footer>
+  </div>
+
+  <div id="view-test" role="tabpanel" aria-labelledby="tab-test" hidden>
+    <details class="settings" id="settings">
+      <summary><span>Настройки</span><span class="sum" id="set-sum"></span></summary>
+      <div class="settings-body">
+        <div class="field">
+          <span class="field-label" id="lbl-mode">Вид въпроси</span>
+          <div class="seg" role="group" aria-labelledby="lbl-mode" id="set-mode"></div>
+        </div>
+        <div class="field">
+          <span class="field-label" id="lbl-groups">Групи глаголи</span>
+          <div class="seg" role="group" aria-labelledby="lbl-groups" id="set-groups"></div>
+        </div>
+        <div class="field">
+          <span class="field-label" id="lbl-count">Брой въпроси</span>
+          <div class="seg" role="group" aria-labelledby="lbl-count" id="set-count"></div>
+        </div>
+        <p class="set-note">Всяка промяна започва нов тест.</p>
+      </div>
+    </details>
+
+    <div id="quiz"></div>
+
+    <p class="tip">
+      Пиши само глагола, без местоимението. За é, è, ê, ç, î използвай бутоните под полето или задръж буквата на клавиатурата (например задръж e за é). Отговор без знаците над буквите се зачита, но ще видиш правилното изписване.
+    </p>
+  </div>
+</div>
+
+<script>
+const E_REG = ['s', 's', 't', 'ons', 'ez', 'ent'];
+
+const GROUPS = [
+  { id: 'base', chip: 'Основни', title: 'Най-важните', sub: 'Неправилни. Тези четири се учат наизуст.', ends: null,
+    verbs: [
+      ['être', 'съм', "je suis, tu es, il est, nous sommes, vous êtes, ils sont"],
+      ['avoir', 'имам', "j'ai, tu as, il a, nous avons, vous avez, ils ont"],
+      ['aller', 'отивам', "je vais, tu vas, il va, nous allons, vous allez, ils vont"],
+      ['faire', 'правя', "je fais, tu fais, il fait, nous faisons, vous faites, ils font"]
+    ] },
+  { id: 'er', chip: '-er', title: 'На -er', sub: 'Правилни. Окончания: -e, -es, -e, -ons, -ez, -ent.',
+    ends: ['e', 'es', 'e', 'ons', 'ez', 'ent'],
+    verbs: [
+      ['jouer', 'играя; свиря', "je joue, tu joues, il joue, nous jouons, vous jouez, ils jouent"],
+      ['aimer', 'обичам, харесвам', "j'aime, tu aimes, il aime, nous aimons, vous aimez, ils aiment"],
+      ['adorer', 'обожавам', "j'adore, tu adores, il adore, nous adorons, vous adorez, ils adorent"],
+      ['détester', 'мразя', "je déteste, tu détestes, il déteste, nous détestons, vous détestez, ils détestent"],
+      ['préférer', 'предпочитам', "je préfère, tu préfères, il préfère, nous préférons, vous préférez, ils préfèrent"],
+      ['écouter', 'слушам', "j'écoute, tu écoutes, il écoute, nous écoutons, vous écoutez, ils écoutent"],
+      ['regarder', 'гледам', "je regarde, tu regardes, il regarde, nous regardons, vous regardez, ils regardent"],
+      ['parler', 'говоря', "je parle, tu parles, il parle, nous parlons, vous parlez, ils parlent"],
+      ['habiter', 'живея (някъде)', "j'habite, tu habites, il habite, nous habitons, vous habitez, ils habitent"],
+      ['travailler', 'работя', "je travaille, tu travailles, il travaille, nous travaillons, vous travaillez, ils travaillent"],
+      ['danser', 'танцувам', "je danse, tu danses, il danse, nous dansons, vous dansez, ils dansent"],
+      ['chanter', 'пея', "je chante, tu chantes, il chante, nous chantons, vous chantez, ils chantent"],
+      ['voyager', 'пътувам', "je voyage, tu voyages, il voyage, nous voyageons, vous voyagez, ils voyagent"],
+      ["s'appeler", 'казвам се', "je m'appelle, tu t'appelles, il s'appelle, nous nous appelons, vous vous appelez, ils s'appellent"]
+    ],
+    note: { title: 'jouer или faire?', items: [
+      ['je joue au tennis', 'jouer à + спорт или игра'],
+      ['je joue du piano', 'jouer de + инструмент'],
+      ['je fais du vélo', 'faire de + спорт или дейност'],
+      ['je fais de la natation', 'de la пред дума от женски род']
+    ] } },
+  { id: 'finir', chip: '-ir (finir)', title: 'На -ir като finir', sub: 'В множествено число се добавя -iss-: nous finissons.',
+    ends: ['is', 'is', 'it', 'issons', 'issez', 'issent'],
+    verbs: [
+      ['finir', 'свършвам, завършвам', "je finis, tu finis, il finit, nous finissons, vous finissez, ils finissent"],
+      ['choisir', 'избирам', "je choisis, tu choisis, il choisit, nous choisissons, vous choisissez, ils choisissent"],
+      ['réfléchir', 'размислям', "je réfléchis, tu réfléchis, il réfléchit, nous réfléchissons, vous réfléchissez, ils réfléchissent"],
+      ['grandir', 'порасвам', "je grandis, tu grandis, il grandit, nous grandissons, vous grandissez, ils grandissent"],
+      ['grossir', 'напълнявам', "je grossis, tu grossis, il grossit, nous grossissons, vous grossissez, ils grossissent"],
+      ['vieillir', 'остарявам', "je vieillis, tu vieillis, il vieillit, nous vieillissons, vous vieillissez, ils vieillissent"],
+      ['rougir', 'изчервявам се', "je rougis, tu rougis, il rougit, nous rougissons, vous rougissez, ils rougissent"],
+      ['guérir', 'оздравявам', "je guéris, tu guéris, il guérit, nous guérissons, vous guérissez, ils guérissent"],
+      ['applaudir', 'ръкопляскам', "j'applaudis, tu applaudis, il applaudit, nous applaudissons, vous applaudissez, ils applaudissent"],
+      ['ralentir', 'забавям', "je ralentis, tu ralentis, il ralentit, nous ralentissons, vous ralentissez, ils ralentissent"],
+      ['atterrir', 'кацам', "j'atterris, tu atterris, il atterrit, nous atterrissons, vous atterrissez, ils atterrissent"],
+      ['se réunir', 'събирам се', "je me réunis, tu te réunis, il se réunit, nous nous réunissons, vous vous réunissez, ils se réunissent"]
+    ] },
+  { id: 'partir', chip: 'partir', title: 'Като partir', sub: 'В единствено число съгласната отпада: je dors, nous dormons.',
+    ends: E_REG,
+    verbs: [
+      ['partir', 'тръгвам, заминавам', "je pars, tu pars, il part, nous partons, vous partez, ils partent"],
+      ['sortir', 'излизам', "je sors, tu sors, il sort, nous sortons, vous sortez, ils sortent"],
+      ['dormir', 'спя', "je dors, tu dors, il dort, nous dormons, vous dormez, ils dorment"],
+      ['sentir', 'усещам; мириша', "je sens, tu sens, il sent, nous sentons, vous sentez, ils sentent"],
+      ['servir', 'сервирам', "je sers, tu sers, il sert, nous servons, vous servez, ils servent"],
+      ['vivre', 'живея', "je vis, tu vis, il vit, nous vivons, vous vivez, ils vivent"],
+      ['suivre', 'следвам; посещавам (курс)', "je suis, tu suis, il suit, nous suivons, vous suivez, ils suivent"]
+    ] },
+  { id: 'venir', chip: 'venir', title: 'Като venir', sub: 'Три основи: je viens, nous venons, ils viennent.',
+    ends: E_REG,
+    verbs: [
+      ['venir', 'идвам', "je viens, tu viens, il vient, nous venons, vous venez, ils viennent"],
+      ['revenir', 'връщам се', "je reviens, tu reviens, il revient, nous revenons, vous revenez, ils reviennent"],
+      ['devenir', 'ставам (някакъв)', "je deviens, tu deviens, il devient, nous devenons, vous devenez, ils deviennent"],
+      ['tenir', 'държа', "je tiens, tu tiens, il tient, nous tenons, vous tenez, ils tiennent"],
+      ['se souvenir', 'спомням си', "je me souviens, tu te souviens, il se souvient, nous nous souvenons, vous vous souvenez, ils se souviennent"]
+    ] },
+  { id: 're', chip: '-re', title: 'На -re', sub: 'Повечето имат две основи: je lis, nous lisons. При -dre няма -t: il répond.',
+    ends: E_REG,
+    verbs: [
+      ['lire', 'чета', "je lis, tu lis, il lit, nous lisons, vous lisez, ils lisent"],
+      ['écrire', 'пиша', "j'écris, tu écris, il écrit, nous écrivons, vous écrivez, ils écrivent"],
+      ['décrire', 'описвам', "je décris, tu décris, il décrit, nous décrivons, vous décrivez, ils décrivent"],
+      ['traduire', 'превеждам', "je traduis, tu traduis, il traduit, nous traduisons, vous traduisez, ils traduisent"],
+      ['conduire', 'карам (кола)', "je conduis, tu conduis, il conduit, nous conduisons, vous conduisez, ils conduisent"],
+      ['construire', 'строя', "je construis, tu construis, il construit, nous construisons, vous construisez, ils construisent"],
+      ['détruire', 'разрушавам', "je détruis, tu détruis, il détruit, nous détruisons, vous détruisez, ils détruisent"],
+      ['mettre', 'слагам; обличам', "je mets, tu mets, il met, nous mettons, vous mettez, ils mettent"],
+      ['permettre', 'позволявам', "je permets, tu permets, il permet, nous permettons, vous permettez, ils permettent"],
+      ['répondre', 'отговарям', "je réponds, tu réponds, il répond, nous répondons, vous répondez, ils répondent"],
+      ['entendre', 'чувам', "j'entends, tu entends, il entend, nous entendons, vous entendez, ils entendent"],
+      ['attendre', 'чакам', "j'attends, tu attends, il attend, nous attendons, vous attendez, ils attendent"],
+      ['vendre', 'продавам', "je vends, tu vends, il vend, nous vendons, vous vendez, ils vendent"],
+      ['perdre', 'губя', "je perds, tu perds, il perd, nous perdons, vous perdez, ils perdent"],
+      ['interdire', 'забранявам', "j'interdis, tu interdis, il interdit, nous interdisons, vous interdisez, ils interdisent"],
+      ['inscrire', 'записвам', "j'inscris, tu inscris, il inscrit, nous inscrivons, vous inscrivez, ils inscrivent"],
+      ['battre', 'бия', "je bats, tu bats, il bat, nous battons, vous battez, ils battent"],
+      ['plaire', 'харесвам се (ça me plaît = харесва ми)', "je plais, tu plais, il plaît, nous plaisons, vous plaisez, ils plaisent"]
+    ] },
+  { id: 'special', chip: 'Особени', title: 'Особени глаголи', sub: 'Всеки има свои основи, но окончанията са обичайните.',
+    ends: E_REG,
+    verbs: [
+      ['connaître', 'познавам (човек, място)', "je connais, tu connais, il connaît, nous connaissons, vous connaissez, ils connaissent"],
+      ['savoir', 'знам; умея', "je sais, tu sais, il sait, nous savons, vous savez, ils savent"],
+      ['croire', 'вярвам; мисля', "je crois, tu crois, il croit, nous croyons, vous croyez, ils croient"],
+      ['voir', 'виждам', "je vois, tu vois, il voit, nous voyons, vous voyez, ils voient"],
+      ['prendre', 'вземам', "je prends, tu prends, il prend, nous prenons, vous prenez, ils prennent"],
+      ['apprendre', 'уча (нещо)', "j'apprends, tu apprends, il apprend, nous apprenons, vous apprenez, ils apprennent"],
+      ['comprendre', 'разбирам', "je comprends, tu comprends, il comprend, nous comprenons, vous comprenez, ils comprennent"],
+      ['boire', 'пия', "je bois, tu bois, il boit, nous buvons, vous buvez, ils boivent"],
+      ['recevoir', 'получавам', "je reçois, tu reçois, il reçoit, nous recevons, vous recevez, ils reçoivent"]
+    ],
+    note: { title: 'Полезни изрази', items: [
+      ['je sais nager', 'savoir = умея нещо (мога да плувам)'],
+      ['je connais Paris', 'connaître = познавам човек или място'],
+      ['je prends le bus', 'хващам автобуса'],
+      ['je prends un café', 'пия кафе'],
+      ['je prends des photos', 'снимам']
+    ] } }
+];
+
+/* Sentences for the test: [infinitive, sentence with ___, answer, Bulgarian] */
+const SENT = [
+  ['être', "Aujourd'hui, je ___ content.", 'suis', 'Днес съм доволен.'],
+  ['être', 'Vous ___ français ?', 'êtes', 'Французи ли сте?'],
+  ['avoir', 'Nous ___ deux enfants.', 'avons', 'Имаме две деца.'],
+  ['avoir', "J'___ un nouveau vélo.", 'ai', 'Имам нов велосипед.'],
+  ['aller', 'Le dimanche, ils ___ au cinéma.', 'vont', 'В неделя те ходят на кино.'],
+  ['aller', 'Elle ___ à la piscine le mercredi.', 'va', 'Тя ходи на басейн в сряда.'],
+  ['faire', 'Tu ___ du sport le week-end ?', 'fais', 'Спортуваш ли през уикенда?'],
+  ['faire', 'Vous ___ de la natation ?', 'faites', 'Плувате ли? (занимавате ли се с плуване)'],
+
+  ['jouer', 'Le samedi, nous ___ au tennis.', 'jouons', 'В събота играем тенис.'],
+  ['jouer', 'Il ___ de la guitare.', 'joue', 'Той свири на китара.'],
+  ['aimer', "J'___ la musique classique.", 'aime', 'Харесвам класическа музика.'],
+  ['regarder', 'Tu ___ la télévision le soir ?', 'regardes', 'Гледаш ли телевизия вечер?'],
+  ['adorer', 'Elles ___ danser.', 'adorent', 'Те обожават да танцуват.'],
+  ['écouter', 'Nous ___ la radio dans la voiture.', 'écoutons', 'Слушаме радио в колата.'],
+  ['préférer', 'Je ___ le thé au café.', 'préfère', 'Предпочитам чая пред кафето.'],
+  ['voyager', 'Nous ___ en été.', 'voyageons', 'Пътуваме през лятото.'],
+  ['voyager', 'Vous ___ souvent ?', 'voyagez', 'Често ли пътувате?'],
+  ['habiter', 'Ils ___ à Bruxelles.', 'habitent', 'Те живеят в Брюксел.'],
+  ["s'appeler", "Je m'___ Stefan.", 'appelle', 'Казвам се Стефан.'],
+  ['chanter', 'Elle ___ très bien.', 'chante', 'Тя пее много хубаво.'],
+  ['détester', 'Tu ___ le football ?', 'détestes', 'Мразиш ли футбола?'],
+  ['travailler', 'Vous ___ le samedi ?', 'travaillez', 'Работите ли в събота?'],
+  ['parler', 'En classe, nous ___ français.', 'parlons', 'В час говорим френски.'],
+  ['danser', 'Ils ___ le tango.', 'dansent', 'Те танцуват танго.'],
+
+  ['finir', 'Le film ___ à dix heures.', 'finit', 'Филмът свършва в десет часа.'],
+  ['finir', 'Je ___ mes devoirs.', 'finis', 'Довършвам домашните си.'],
+  ['choisir', 'Nous ___ un restaurant pour ce soir.', 'choisissons', 'Избираме ресторант за тази вечер.'],
+  ['applaudir', 'Les spectateurs ___ à la fin du concert.', 'applaudissent', 'Зрителите ръкопляскат в края на концерта.'],
+  ['réfléchir', 'Tu ___ avant de répondre ?', 'réfléchis', 'Мислиш ли, преди да отговориш?'],
+  ['grandir', 'Les enfants ___ vite.', 'grandissent', 'Децата растат бързо.'],
+  ['atterrir', "L'avion ___ à Sofia.", 'atterrit', 'Самолетът каца в София.'],
+  ['se réunir', 'Le samedi, nous nous ___ chez des amis.', 'réunissons', 'В събота се събираме у приятели.'],
+
+  ['sortir', 'Le vendredi soir, je ___ avec mes amis.', 'sors', 'В петък вечер излизам с приятелите си.'],
+  ['sortir', 'Vous ___ ce soir ?', 'sortez', 'Излизате ли тази вечер?'],
+  ['partir', 'Nous ___ en vacances en juillet.', 'partons', 'Заминаваме на почивка през юли.'],
+  ['partir', 'Le train ___ à huit heures.', 'part', 'Влакът тръгва в осем часа.'],
+  ['dormir', "Le dimanche, tu ___ jusqu'à dix heures ?", 'dors', 'В неделя спиш ли до десет?'],
+  ['suivre', 'Ils ___ un cours de danse.', 'suivent', 'Те посещават курс по танци.'],
+  ['vivre', 'Elle ___ à Paris.', 'vit', 'Тя живее в Париж.'],
+
+  ['venir', 'Tu ___ au concert avec nous ?', 'viens', 'Идваш ли на концерта с нас?'],
+  ['venir', 'Ils ___ de Bulgarie.', 'viennent', 'Те са от България.'],
+  ['revenir', 'Je ___ de vacances demain.', 'reviens', 'Връщам се от почивка утре.'],
+  ['devenir', 'Elle ___ professeur.', 'devient', 'Тя става учителка.'],
+  ['se souvenir', 'Je me ___ de ce voyage.', 'souviens', 'Спомням си това пътуване.'],
+
+  ['lire', 'Le soir, je ___ un livre.', 'lis', 'Вечер чета книга.'],
+  ['lire', 'Vous ___ des romans policiers ?', 'lisez', 'Четете ли криминални романи?'],
+  ['écrire', 'Elle ___ un message à sa mère.', 'écrit', 'Тя пише съобщение на майка си.'],
+  ['écrire', 'Nous ___ des cartes postales.', 'écrivons', 'Пишем картички.'],
+  ['conduire', 'Il ___ la voiture le week-end.', 'conduit', 'Той кара колата през уикенда.'],
+  ['attendre', "J'___ le bus.", 'attends', 'Чакам автобуса.'],
+  ['entendre', 'Tu ___ la musique ?', 'entends', 'Чуваш ли музиката?'],
+  ['vendre', 'Ils ___ leur vieux vélo.', 'vendent', 'Те продават стария си велосипед.'],
+  ['mettre', 'Je ___ mon manteau.', 'mets', 'Обличам палтото си.'],
+  ['plaire', 'Ce film me ___ beaucoup.', 'plaît', 'Този филм много ми харесва.'],
+  ['répondre', 'Elle ___ au téléphone.', 'répond', 'Тя отговаря на телефона.'],
+  ['perdre', 'Nous ___ souvent au tennis.', 'perdons', 'Често губим на тенис.'],
+  ['traduire', 'Je ___ le texte en bulgare.', 'traduis', 'Превеждам текста на български.'],
+  ['inscrire', "J'___ ma fille au cours de piano.", 'inscris', 'Записвам дъщеря си на уроци по пиано.'],
+
+  ['savoir', 'Je ___ nager.', 'sais', 'Мога да плувам.'],
+  ['savoir', 'Elle ___ jouer du piano.', 'sait', 'Тя може да свири на пиано.'],
+  ['connaître', 'Tu ___ Marie ?', 'connais', 'Познаваш ли Мари?'],
+  ['prendre', 'Nous ___ le bus pour aller au musée.', 'prenons', 'Взимаме автобуса до музея.'],
+  ['prendre', 'Ils ___ un café en terrasse.', 'prennent', 'Те пият кафе на терасата.'],
+  ['apprendre', "J'___ le français.", 'apprends', 'Уча френски.'],
+  ['comprendre', 'Vous ___ la question ?', 'comprenez', 'Разбирате ли въпроса?'],
+  ['voir', 'Nous ___ un film au cinéma.', 'voyons', 'Гледаме филм в киното.'],
+  ['boire', 'Ils ___ de l\'eau après le sport.', 'boivent', 'Те пият вода след спорта.'],
+  ['boire', 'Nous ___ du jus d\'orange.', 'buvons', 'Пием портокалов сок.'],
+  ['recevoir', 'Je ___ des amis à la maison.', 'reçois', 'Посрещам приятели вкъщи.'],
+  ['croire', "Tu ___ que c'est une bonne idée ?", 'crois', 'Мислиш ли, че е добра идея?']
+];
+
+const ICON = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5z" fill="currentColor" stroke="none"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>';
+const PLAY = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5v14l12-7z" fill="currentColor"/></svg>';
+const STOP = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1.5" fill="currentColor"/></svg>';
+
+const $ = id => document.getElementById(id);
+
+/* ---------- speech ---------- */
+const synth = ('speechSynthesis' in window) ? window.speechSynthesis : null;
+let voice = null;
+let slow = false;
+try { slow = localStorage.getItem('verbes-slow') === '1'; } catch (e) {}
+
+const hint = $('hint');
+function showHint(text) { hint.textContent = text; hint.hidden = false; }
+
+function loadVoices() {
+  if (!synth) return;
+  const vs = synth.getVoices();
+  voice = vs.find(v => /^fr[-_]FR/i.test(v.lang)) || vs.find(v => /^fr/i.test(v.lang)) || null;
+  if (vs.length && !voice) {
+    showHint('На устройството няма френски глас, затова думите може да звучат с чужд акцент. Добави френски глас от настройките на телефона: Text-to-speech → Google → Инсталиране на гласови данни → Français.');
+  } else if (voice) {
+    hint.hidden = true;
+  }
+}
+if (synth) {
+  loadVoices();
+  if ('onvoiceschanged' in synth) synth.onvoiceschanged = loadVoices;
+} else {
+  showHint('Този браузър не може да чете на глас. Отвори страницата в Chrome или Safari.');
+}
+
+function clearSpeaking() {
+  document.querySelectorAll('.speaking').forEach(e => e.classList.remove('speaking'));
+}
+function setPlaying(btn, on) {
+  btn.classList.toggle('playing', on);
+  const lbl = btn.querySelector('.lbl');
+  if (lbl) {
+    lbl.textContent = on ? 'Спри' : btn.dataset.label;
+    btn.querySelector('svg').outerHTML = on ? STOP : PLAY;
+  } else {
+    btn.innerHTML = on ? STOP : PLAY;
+  }
+}
+function clearPlaying() {
+  document.querySelectorAll('.playing').forEach(b => setPlaying(b, false));
+}
+function makeUtterance(text, target, follow) {
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'fr-FR';
+  if (voice) u.voice = voice;
+  u.rate = slow ? 0.6 : 0.92;
+  u.onstart = () => {
+    clearSpeaking();
+    if (target) {
+      target.classList.add('speaking');
+      if (follow) {
+        const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        target.scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' });
+      }
+    }
+  };
+  u.onend = u.onerror = () => { if (target) target.classList.remove('speaking'); };
+  return u;
+}
+function stopAll() {
+  if (!synth) return;
+  synth.cancel();
+  clearSpeaking();
+  clearPlaying();
+}
+function speak(text, target) {
+  if (!synth) return;
+  stopAll();
+  synth.speak(makeUtterance(text, target, false));
+}
+function playSeq(btn, items, follow) {
+  if (!synth) return;
+  const wasPlaying = btn.classList.contains('playing');
+  stopAll();
+  if (wasPlaying) return;
+  setPlaying(btn, true);
+  items.forEach(([text, target], i) => {
+    const u = makeUtterance(text, target, follow);
+    if (i === items.length - 1) {
+      const prev = u.onend;
+      u.onend = u.onerror = () => { prev(); if (btn.classList.contains('playing')) setPlaying(btn, false); };
+    }
+    synth.speak(u);
+  });
+}
+
+/* ---------- helpers ---------- */
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+function splitForm(text) {
+  const cut = Math.max(text.lastIndexOf(' '), text.lastIndexOf("'")) + 1;
+  return [text.slice(0, cut), text.slice(cut)];
+}
+function sayButton(text, cls) {
+  const b = el('button', cls);
+  b.type = 'button';
+  b.setAttribute('aria-label', 'Произнеси: ' + text);
+  b.innerHTML = ICON;
+  b.appendChild(el('span', null, text));
+  b.addEventListener('click', () => speak(text, b));
+  return b;
+}
+/* one conjugated form: pronoun muted, ending in red */
+function formButton(text, ending) {
+  const b = el('button', 'form');
+  b.type = 'button';
+  b.setAttribute('aria-label', 'Произнеси: ' + text);
+  b.innerHTML = ICON;
+  const [pron, word] = splitForm(text);
+  const s = el('span');
+  if (pron) s.appendChild(el('span', 'pr', pron));
+  if (ending && word.length > ending.length && word.endsWith(ending)) {
+    s.appendChild(document.createTextNode(word.slice(0, -ending.length)));
+    s.appendChild(el('span', 'end', ending));
+  } else {
+    s.appendChild(document.createTextNode(word));
+  }
+  b.appendChild(s);
+  b.addEventListener('click', () => speak(text, b));
+  return b;
+}
+/* a whole sentence with the verb in red */
+function sentenceButton(before, answer, after) {
+  const full = before + answer + after;
+  const b = el('button', 'sbtn');
+  b.type = 'button';
+  b.setAttribute('aria-label', 'Произнеси: ' + full);
+  b.innerHTML = ICON;
+  const s = el('span');
+  s.append(document.createTextNode(before), el('span', 'end', answer), document.createTextNode(after));
+  b.appendChild(s);
+  b.addEventListener('click', () => speak(full, b));
+  return b;
+}
+
+/* ---------- verb list ---------- */
+const VERB = {};
+const chips = $('chips');
+const root = $('groups');
+let total = 0;
+
+GROUPS.forEach(g => {
+  const a = el('a', null, g.chip);
+  a.href = '#' + g.id;
+  chips.appendChild(a);
+
+  const sec = el('section');
+  sec.id = g.id;
+
+  const head = el('div', 'sec-head');
+  const hText = el('div');
+  hText.append(el('h2', null, g.title), el('p', 'sub', g.sub));
+  const play = el('button', 'play');
+  play.type = 'button';
+  play.dataset.label = 'Чуй глаголите';
+  play.innerHTML = PLAY + '<span class="lbl">Чуй глаголите</span>';
+  head.append(hText, play);
+  sec.appendChild(head);
+
+  const queue = [];
+  g.verbs.forEach(([fr, bg, conj]) => {
+    total++;
+    const forms = conj.split(', ');
+    VERB[fr] = { g: g.id, bg, forms, ends: g.ends };
+
+    const row = el('div', 'verb');
+    const inf = sayButton(fr, 'say');
+    const vplay = el('button', 'vplay');
+    vplay.type = 'button';
+    vplay.setAttribute('aria-label', 'Чуй спрежението на ' + fr);
+    vplay.innerHTML = PLAY;
+    row.append(inf, el('div', 'meaning', bg), vplay);
+
+    const grid = el('div', 'conj');
+    const fq = [];
+    forms.forEach((f, i) => {
+      const fb = formButton(f, g.ends ? g.ends[i] : null);
+      grid.appendChild(fb);
+      fq.push([f, fb]);
+    });
+    row.appendChild(grid);
+    vplay.addEventListener('click', () => playSeq(vplay, fq, false));
+
+    queue.push([fr, inf]);
+    sec.appendChild(row);
+  });
+  play.addEventListener('click', () => playSeq(play, queue, true));
+
+  if (g.note) {
+    const n = el('div', 'note');
+    n.appendChild(el('h3', null, g.note.title));
+    g.note.items.forEach(([fr, bg]) => {
+      const it = el('div', 'note-item');
+      it.append(sayButton(fr, 'chip'), el('span', null, bg));
+      n.appendChild(it);
+    });
+    sec.appendChild(n);
+  }
+
+  root.appendChild(sec);
+});
+
+$('meta').textContent = total + ' глагола · il важи и за elle, ils и за elles';
+
+/* ---------- speed toggle ---------- */
+const bN = $('spd-normal');
+const bS = $('spd-slow');
+function setSlow(v) {
+  slow = v;
+  bN.setAttribute('aria-pressed', String(!v));
+  bS.setAttribute('aria-pressed', String(v));
+  try { localStorage.setItem('verbes-slow', v ? '1' : '0'); } catch (e) {}
+}
+bN.addEventListener('click', () => setSlow(false));
+bS.addEventListener('click', () => setSlow(true));
+setSlow(slow);
+
+/* ---------- tabs ---------- */
+const tabVerbs = $('tab-verbs'), tabTest = $('tab-test');
+const viewVerbs = $('view-verbs'), viewTest = $('view-test');
+function showView(name) {
+  const t = name === 'test';
+  viewVerbs.hidden = t;
+  viewTest.hidden = !t;
+  tabVerbs.setAttribute('aria-selected', String(!t));
+  tabTest.setAttribute('aria-selected', String(t));
+  stopAll();
+  try { localStorage.setItem('verbes-view', name); } catch (e) {}
+}
+tabVerbs.addEventListener('click', () => showView('verbs'));
+tabTest.addEventListener('click', () => showView('test'));
+
+/* ---------- test ---------- */
+const MODES = [['mix', 'Смесено'], ['conj', 'Спрежения'], ['sent', 'Изречения']];
+const COUNTS = [10, 20];
+const KEYS = ['é', 'è', 'ê', 'ç', 'î', 'ô'];
+
+const st = { mode: 'mix', groups: new Set(GROUPS.map(g => g.id)), count: 10, qs: [], i: 0, score: 0, wrong: [], checked: false };
+try {
+  const s = JSON.parse(localStorage.getItem('verbes-test') || 'null');
+  if (s) {
+    if (MODES.some(m => m[0] === s.mode)) st.mode = s.mode;
+    if (COUNTS.includes(s.count)) st.count = s.count;
+    if (Array.isArray(s.groups)) {
+      const gs = s.groups.filter(id => GROUPS.some(g => g.id === id));
+      if (gs.length) st.groups = new Set(gs);
+    }
+  }
+} catch (e) {}
+function saveSettings() {
+  try { localStorage.setItem('verbes-test', JSON.stringify({ mode: st.mode, count: st.count, groups: [...st.groups] })); } catch (e) {}
+}
+
+function norm(s) {
+  return s.normalize('NFC').toLowerCase().replace(/[’‘`´]/g, "'").replace(/\s+/g, ' ').trim();
+}
+function strip(s) {
+  return norm(s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/œ/g, 'oe');
+}
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function conjQ(inf, p) {
+  const v = VERB[inf];
+  const full = v.forms[p];
+  const [pron, word] = splitForm(full);
+  return { type: 'conj', inf, p, pron, answer: word, full, speak: full };
+}
+function sentQ(row) {
+  const [inf, s, a, bg] = row;
+  const [before, after] = s.split('___');
+  return { type: 'sent', inf, before, after, answer: a, speak: before + a + after, bg };
+}
+function buildRound() {
+  const conjPool = [];
+  Object.keys(VERB).forEach(inf => {
+    if (st.groups.has(VERB[inf].g)) for (let p = 0; p < 6; p++) conjPool.push([inf, p]);
+  });
+  const sentPool = SENT.filter(r => st.groups.has(VERB[r[0]].g));
+  shuffle(conjPool);
+  shuffle(sentPool);
+
+  let nS = st.mode === 'conj' ? 0 : st.mode === 'sent' ? st.count : Math.round(st.count / 2);
+  nS = Math.min(nS, sentPool.length);
+  const nC = st.mode === 'sent' ? 0 : st.count - nS;
+
+  const cq = [];
+  const usedVerb = new Set();
+  for (const [inf, p] of conjPool) {
+    if (cq.length >= nC) break;
+    if (usedVerb.has(inf)) continue;
+    usedVerb.add(inf);
+    cq.push(conjQ(inf, p));
+  }
+  for (const [inf, p] of conjPool) {
+    if (cq.length >= nC) break;
+    if (cq.some(q => q.inf === inf && q.p === p)) continue;
+    cq.push(conjQ(inf, p));
+  }
+  return shuffle(sentPool.slice(0, nS).map(sentQ).concat(cq));
+}
+
+/* settings UI */
+function toggleBtn(label, pressed, onClick) {
+  const b = el('button', 'toggle', label);
+  b.type = 'button';
+  b.setAttribute('aria-pressed', String(pressed));
+  b.addEventListener('click', onClick);
+  return b;
+}
+function renderSettings() {
+  const m = $('set-mode'), g = $('set-groups'), c = $('set-count');
+  m.replaceChildren(...MODES.map(([id, label]) => toggleBtn(label, st.mode === id, () => { st.mode = id; settingsChanged(); })));
+  g.replaceChildren(...GROUPS.map(gr => toggleBtn(gr.chip, st.groups.has(gr.id), () => {
+    if (st.groups.has(gr.id)) {
+      if (st.groups.size === 1) return;
+      st.groups.delete(gr.id);
+    } else {
+      st.groups.add(gr.id);
+    }
+    settingsChanged();
+  })));
+  c.replaceChildren(...COUNTS.map(n => toggleBtn(String(n), st.count === n, () => { st.count = n; settingsChanged(); })));
+  const modeLabel = MODES.find(x => x[0] === st.mode)[1];
+  const parts = [modeLabel, st.count + ' въпроса'];
+  if (st.groups.size < GROUPS.length) parts.push(st.groups.size === 1 ? '1 група' : st.groups.size + ' групи');
+  $('set-sum').textContent = parts.join(' · ');
+}
+function settingsChanged() {
+  saveSettings();
+  renderSettings();
+  startRound(null, false);
+}
+
+/* round */
+const quiz = $('quiz');
+function startRound(qs, focus) {
+  stopAll();
+  st.qs = qs || buildRound();
+  st.i = 0;
+  st.score = 0;
+  st.wrong = [];
+  renderQ(focus);
+}
+
+function renderQ(focus) {
+  const q = st.qs[st.i];
+  st.checked = false;
+  const card = el('div', 'qcard');
+
+  const top = el('div', 'qtop');
+  const scoreEl = el('span', null, 'Верни: ' + st.score);
+  top.append(el('span', null, 'Въпрос ' + (st.i + 1) + ' от ' + st.qs.length), scoreEl);
+  const prog = el('div', 'progress');
+  const bar = el('i');
+  bar.style.width = (st.i / st.qs.length * 100) + '%';
+  prog.appendChild(bar);
+  card.append(top, prog);
+
+  card.appendChild(el('p', 'eyebrow kind', q.type === 'conj' ? 'Спрегни в présent' : 'Попълни глагола в présent'));
+
+  const input = el('input', 'ans');
+  input.id = 'answer';
+  input.type = 'text';
+  input.setAttribute('autocomplete', 'off');
+  input.setAttribute('autocapitalize', 'none');
+  input.setAttribute('autocorrect', 'off');
+  input.setAttribute('spellcheck', 'false');
+  input.setAttribute('enterkeyhint', 'go');
+  input.setAttribute('lang', 'fr');
+
+  if (q.type === 'conj') {
+    input.setAttribute('aria-label', 'Формата на ' + q.inf + ' за ' + q.pron.trim());
+    const head = el('div', 'qverb');
+    head.append(sayButton(q.inf, 'say'), el('span', 'meaning', VERB[q.inf].bg));
+    const line = el('p', 'qline');
+    if (q.pron) line.appendChild(el('span', 'pr', q.pron));
+    line.appendChild(input);
+    card.append(head, line);
+  } else {
+    input.setAttribute('aria-label', 'Глаголът ' + q.inf + ' в изречението');
+    const p = el('p', 'sentence');
+    p.append(document.createTextNode(q.before), input, document.createTextNode(' '), el('span', 'inf-hint', '(' + q.inf + ')'), document.createTextNode(q.after));
+    card.append(p, el('p', 'bgline', q.bg));
+  }
+
+  const keys = el('div', 'keys');
+  keys.setAttribute('aria-label', 'Букви със знаци');
+  KEYS.forEach(k => {
+    const b = el('button', null, k);
+    b.type = 'button';
+    b.setAttribute('aria-label', 'Въведи ' + k);
+    b.addEventListener('pointerdown', e => e.preventDefault());
+    b.addEventListener('click', () => insertChar(input, k));
+    keys.appendChild(b);
+  });
+  card.appendChild(keys);
+
+  const fb = el('div', 'feedback');
+  fb.hidden = true;
+  fb.setAttribute('aria-live', 'polite');
+  card.appendChild(fb);
+
+  const actions = el('div', 'actions');
+  const skip = el('button', 'btn', 'Не знам');
+  skip.type = 'button';
+  const main = el('button', 'btn primary', 'Провери');
+  main.type = 'button';
+  actions.append(skip, main);
+  card.appendChild(actions);
+
+  const ui = { input, fb, skip, main, keys, scoreEl, bar };
+  main.addEventListener('click', () => st.checked ? next() : check(ui, false));
+  skip.addEventListener('click', () => check(ui, true));
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      st.checked ? next() : check(ui, false);
+    }
+  });
+
+  quiz.replaceChildren(card);
+  if (focus) {
+    input.focus({ preventScroll: true });
+    card.scrollIntoView({ block: 'nearest' });
+  }
+}
+
+function insertChar(input, ch) {
+  if (input.readOnly) return;
+  const focused = document.activeElement === input;
+  const a = focused ? input.selectionStart : input.value.length;
+  const b = focused ? input.selectionEnd : input.value.length;
+  input.value = input.value.slice(0, a) + ch + input.value.slice(b);
+  input.focus();
+  input.setSelectionRange(a + 1, a + 1);
+}
+
+function check(ui, gaveUp) {
+  if (st.checked) return;
+  const q = st.qs[st.i];
+  const val = gaveUp ? '' : ui.input.value;
+  if (!gaveUp && !val.trim()) { ui.input.focus(); return; }
+
+  const cands = q.type === 'conj' ? [q.answer, q.full] : [q.answer];
+  const exact = !gaveUp && cands.some(c => norm(c) === norm(val));
+  const near = !gaveUp && !exact && cands.some(c => strip(c) === strip(val));
+  const good = exact || near;
+  if (good) st.score++;
+  else st.wrong.push({ q, given: val.trim() });
+  st.checked = true;
+
+  ui.input.readOnly = true;
+  ui.input.classList.add(exact ? 'ok' : near ? 'near' : 'bad');
+  ui.keys.hidden = true;
+  ui.skip.hidden = true;
+  ui.main.textContent = st.i + 1 < st.qs.length ? 'Напред' : 'Виж резултата';
+  ui.scoreEl.textContent = 'Верни: ' + st.score;
+  ui.bar.style.width = ((st.i + 1) / st.qs.length * 100) + '%';
+
+  const verdict = exact ? ['ok', 'Правилно!']
+    : near ? ['near', 'Почти! Внимавай за знаците над буквите.']
+    : gaveUp ? ['bad', 'Ето отговора:'] : ['bad', 'Грешно.'];
+  const line = el('p', 'fb-line');
+  let sayBtn;
+  if (q.type === 'conj') {
+    line.appendChild(el('span', null, 'Правилно е'));
+    sayBtn = formButton(q.full, VERB[q.inf].ends ? VERB[q.inf].ends[q.p] : null);
+  } else {
+    sayBtn = sentenceButton(q.before, q.answer, q.after);
+  }
+  line.appendChild(sayBtn);
+  ui.fb.replaceChildren(el('p', 'verdict ' + verdict[0], verdict[1]), line);
+  ui.fb.hidden = false;
+  if (!(exact && document.activeElement === ui.input)) ui.main.focus({ preventScroll: true });
+  ui.fb.scrollIntoView({ block: 'nearest' });
+  speak(q.speak, sayBtn);
+}
+
+function next() {
+  stopAll();
+  st.i++;
+  if (st.i >= st.qs.length) renderResult();
+  else renderQ(true);
+}
+
+function renderResult() {
+  const n = st.qs.length, s = st.score;
+  const pct = n ? s / n : 0;
+  const card = el('div', 'qcard');
+  card.appendChild(el('p', 'eyebrow kind', 'Résultat'));
+
+  const head = el('div', 'result-head');
+  const score = el('p', 'score', String(s));
+  score.appendChild(el('small', null, ' / ' + n + ' верни'));
+  head.append(score, el('p', 'grade', 'Note : ' + Math.round(pct * 20) + '/20'));
+  card.appendChild(head);
+
+  const msg = el('p', 'result-msg');
+  const [fr, bg] = pct >= 0.9 ? ['Excellent !', 'Отлично.']
+    : pct >= 0.7 ? ['Très bien !', 'Много добре.']
+    : pct >= 0.5 ? ['Pas mal.', 'Добре, още малко упражнения.']
+    : ['Courage !', 'Прегледай глаголите и опитай пак.'];
+  msg.append(el('i', null, fr), document.createTextNode(' ' + bg));
+  card.appendChild(msg);
+
+  if (st.wrong.length) {
+    const box = el('div', 'mistakes');
+    box.appendChild(el('h3', null, 'Грешки'));
+    const ul = el('ul');
+    st.wrong.forEach(({ q, given }) => {
+      const li = el('li');
+      const prompt = el('span', 'm-prompt');
+      if (q.type === 'conj') prompt.textContent = q.inf + ' → ' + q.pron + '___';
+      else prompt.textContent = q.before + '___' + q.after + ' (' + q.inf + ')';
+      li.appendChild(prompt);
+      if (given) {
+        const g = el('span', 'm-prompt');
+        g.append(document.createTextNode('Твоят отговор: '), el('span', 'given', given));
+        li.appendChild(g);
+      }
+      li.appendChild(q.type === 'conj'
+        ? formButton(q.full, VERB[q.inf].ends ? VERB[q.inf].ends[q.p] : null)
+        : sentenceButton(q.before, q.answer, q.after));
+      ul.appendChild(li);
+    });
+    box.appendChild(ul);
+    card.appendChild(box);
+  }
+
+  const actions = el('div', 'actions');
+  if (st.wrong.length) {
+    const retry = el('button', 'btn', 'Повтори грешните');
+    retry.type = 'button';
+    const again = st.wrong.map(w => w.q);
+    retry.addEventListener('click', () => startRound(shuffle(again.slice()), true));
+    actions.appendChild(retry);
+  }
+  const fresh = el('button', 'btn primary', 'Нов тест');
+  fresh.type = 'button';
+  fresh.addEventListener('click', () => startRound(null, true));
+  actions.appendChild(fresh);
+  card.appendChild(actions);
+
+  quiz.replaceChildren(card);
+  card.scrollIntoView({ block: 'nearest' });
+}
+
+renderSettings();
+startRound(null, false);
+
+let startView = 'verbs';
+try { startView = localStorage.getItem('verbes-view') || 'verbs'; } catch (e) {}
+if (location.hash === '#test') startView = 'test';
+showView(startView);
+
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+
+</body></html>
