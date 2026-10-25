@@ -14,4 +14,5 @@
 - `pairs.js` — играта „Двойки“
 - `dialogues.js`, `dialogues-data.js` — кратките диалози
 - `manifest.webmanifest`, `icon*.png`, `icon.svg` — за инсталиране като приложение
+- `fonts.css`, `fonts/` — шрифтовете Literata и Onest (SIL Open Font License), хостнати тук вместо от Google Fonts
 - `sw.js` — офлайн режим (при нови файлове смени `VERSION`)
