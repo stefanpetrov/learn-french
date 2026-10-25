@@ -1,1 +1,11 @@
-/* explain: styles (merged into style.css at the end) */
+/* explain: "Защо: …", the rule behind a wrong answer (Test feedback, its mistakes list, Кога?) */
+.fb-why {
+  margin: 0;
+  padding-left: .6rem;
+  border-left: 2px solid var(--rule-strong);
+  font-size: .92rem;
+  line-height: 1.45;
+  color: var(--muted);
+  overflow-wrap: break-word;
+}
+.mistakes .fb-why { margin-top: .15rem; font-size: .88rem; }

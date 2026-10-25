@@ -1,1 +1,7 @@
 /* when: styles (merged into style.css at the end) */
+.wn-time { overflow-wrap: anywhere; }
+/* tap targets of at least 44px */
+#when .toggle { min-height: 44px; min-width: 44px; }
+#when .feedback .form, #when .mistakes .form, #when .ans { min-height: 44px; }
+/* explain.css owns .fb-why; this only keeps the line tight when it has no style of its own */
+:where(#when .fb-why) { margin: 0; font-size: .92rem; }

@@ -853,8 +853,11 @@ const st = {
   count: COUNTS.includes(savedTest.count) ? savedTest.count : 10,
   groups: validSet(savedTest.groups, GROUP_IDS, GROUP_IDS),
   tenses: validSet(savedTest.tenses, TENSE_IDS, ['pr']),
-  qs: [], i: 0, score: 0, wrong: [], checked: false
+  // qs: the round's questions; queue: the order they are asked in, where a missed one
+  // comes back once ({ q, again: true }); i: place in queue; done: first tries answered
+  qs: [], queue: [], i: 0, done: 0, score: 0, wrong: [], checked: false
 };
+const TEST_AGAIN_AFTER = 3;   // a missed question comes back once, this many questions later
 function saveSettings() {
   save('verbes-test', { mode: st.mode, count: st.count, groups: [...st.groups], tenses: [...st.tenses] });
 }
@@ -942,24 +945,28 @@ function startRound(qs, focus, fromCards) {
   st.fromCards = !!fromCards;
   st.retry = !!qs && !fromCards;
   st.qs = qs || buildRound();
+  st.queue = st.qs.map(q => ({ q, again: false }));
   renderSum();
   st.i = 0;
+  st.done = 0;
   st.score = 0;
   st.wrong = [];
   renderQ(focus);
 }
 
 function renderQ(focus) {
-  const q = st.qs[st.i];
+  const item = st.queue[st.i];
+  const q = item.q;
   st.checked = false;
   const card = el('div', 'qcard');
 
+  // a second try is not a new question: the count, the score and the bar stay
   const top = el('div', 'qtop');
   const scoreEl = el('span', null, 'Верни: ' + st.score);
-  top.append(el('span', null, 'Въпрос ' + (st.i + 1) + ' от ' + st.qs.length), scoreEl);
+  top.append(el('span', null, item.again ? 'Още веднъж' : 'Въпрос ' + (st.done + 1) + ' от ' + st.qs.length), scoreEl);
   const prog = el('div', 'progress');
   const bar = el('i');
-  bar.style.width = (st.i / st.qs.length * 100) + '%';
+  bar.style.width = (st.done / st.qs.length * 100) + '%';
   prog.appendChild(bar);
   card.append(top, prog);
 
@@ -1022,7 +1029,7 @@ function renderQ(focus) {
   actions.append(skip, main);
   card.appendChild(actions);
 
-  const ui = { input, fb, skip, main, keys, scoreEl, bar };
+  const ui = { item, input, fb, skip, main, keys, scoreEl, bar };
   main.addEventListener('click', () => st.checked ? next() : check(ui, false));
   skip.addEventListener('click', () => check(ui, true));
   input.addEventListener('keydown', e => {
@@ -1055,9 +1062,23 @@ function answerFeedback(q) {
   return sentenceButton(q.before, q.answer, q.after);
 }
 
+/* "Защо е грешно" (explain.js): the rule behind a wrong form, or null */
+function testWhy(q, val) {
+  if ((q.type !== 'conj' && q.type !== 'sent') || typeof explainMistake !== 'function') return null;
+  const x = { inf: q.inf, tense: q.tense, answer: q.answer };
+  if (q.type === 'conj') x.p = q.p;
+  try {
+    const r = explainMistake(x, val);
+    return r && r.text ? r.text : null;
+  } catch (e) {
+    return null;
+  }
+}
+
 function check(ui, gaveUp) {
   if (st.checked) return;
-  const q = st.qs[st.i];
+  const { item } = ui;
+  const q = item.q;
   const val = gaveUp ? '' : ui.input.value;
   if (!gaveUp && !val.trim()) { ui.input.focus(); return; }
 
@@ -1068,26 +1089,36 @@ function check(ui, gaveUp) {
   const exact = !gaveUp && cands.some(c => norm(c) === norm(val));
   const near = !gaveUp && !exact && cands.some(c => nearMatch(c, val));
   const good = exact || near;
-  if (good) st.score++;
-  else st.wrong.push({ q, given: val.trim() });
+  const why = good || gaveUp ? null : testWhy(q, val);
+  // only the first try counts; a miss (or "Не знам") comes back once, a few questions later
+  if (!item.again) {
+    st.done++;
+    if (good) st.score++;
+    else {
+      st.wrong.push({ q, given: val.trim(), why });
+      st.queue.splice(Math.min(st.i + 1 + TEST_AGAIN_AFTER, st.queue.length), 0, { q, again: true });
+    }
+  }
   st.checked = true;
 
   ui.input.readOnly = true;
   ui.input.classList.add(exact ? 'ok' : near ? 'near' : 'bad');
   ui.keys.hidden = true;
   ui.skip.hidden = true;
-  ui.main.textContent = st.i + 1 < st.qs.length ? 'Напред' : 'Виж резултата';
+  ui.main.textContent = st.i + 1 < st.queue.length ? 'Напред' : 'Виж резултата';
   ui.scoreEl.textContent = 'Верни: ' + st.score;
-  ui.bar.style.width = ((st.i + 1) / st.qs.length * 100) + '%';
+  ui.bar.style.width = (st.done / st.qs.length * 100) + '%';
 
-  const verdict = exact ? ['ok', 'Правилно!']
-    : near ? ['near', 'Почти! Внимавай за знаците над буквите.']
+  const bravo = item.again && good;
+  const verdict = exact ? ['ok', bravo ? 'Браво, този път вярно.' : 'Правилно!']
+    : near ? ['near', (bravo ? 'Браво, този път вярно. ' : 'Почти! ') + 'Внимавай за знаците над буквите.']
     : gaveUp ? ['bad', 'Ето отговора:'] : ['bad', 'Грешно.'];
   const line = el('p', 'fb-line');
   if (q.type !== 'sent' && !exact) line.appendChild(el('span', null, 'Правилно е'));
   const sayBtn = answerFeedback(q);
   line.appendChild(sayBtn);
   ui.fb.replaceChildren(el('p', 'verdict ' + verdict[0], verdict[1]), line);
+  if (why) ui.fb.appendChild(el('p', 'fb-why', 'Защо: ' + why));
   if (q.tense === 'pc' && /\(/.test(q.answer)) {
     ui.fb.appendChild(el('p', 'fb-line', '(e) и (s) се пишат според рода и числото: allé, allée, allés, allées.'));
   }
@@ -1100,7 +1131,7 @@ function check(ui, gaveUp) {
 function next() {
   stopAll();
   st.i++;
-  if (st.i >= st.qs.length) renderResult();
+  if (st.i >= st.queue.length) renderResult();
   else renderQ(true);
 }
 
@@ -1129,7 +1160,7 @@ function renderResult() {
     const box = el('div', 'mistakes');
     box.appendChild(el('h3', null, 'Грешки'));
     const ul = el('ul');
-    st.wrong.forEach(({ q, given }) => {
+    st.wrong.forEach(({ q, given, why }) => {
       const li = el('li');
       const prompt = el('span', 'm-prompt');
       const tl = q.tense ? TENSE[q.tense].label : '';
@@ -1143,6 +1174,7 @@ function renderResult() {
         li.appendChild(g);
       }
       li.appendChild(answerFeedback(q));
+      if (why) li.appendChild(el('p', 'fb-why', 'Защо: ' + why));
       ul.appendChild(li);
     });
     box.appendChild(ul);

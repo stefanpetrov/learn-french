@@ -257,7 +257,59 @@
 </footer>
 
 <!-- progress:start -->
-<dialog id="progress-dialog" aria-labelledby="progress-title"></dialog>
+<dialog id="progress-dialog" class="pg-dialog" closedby="any" aria-labelledby="progress-title">
+  <div class="pg-head">
+    <h2 id="progress-title">Запази прогреса</h2>
+    <button type="button" class="btn" id="pg-close">Затвори</button>
+  </div>
+  <div class="pg-body">
+    <div class="pg-sec">
+      <h3>Инсталирай</h3>
+      <p class="pg-text" id="pg-install-how" tabindex="-1"></p>
+      <div class="actions pg-actions" id="pg-install-row" hidden><button type="button" class="btn primary" id="pg-install">Инсталирай</button></div>
+      <p class="set-note">Така приложението се отваря с едно чукване и работи без интернет. На iPhone и iPad пази и прогреса ти: Safari изтрива запазеното от сайт, който не е отварян 7 дни, а инсталираните приложения са защитени.</p>
+      <p class="set-note" id="pg-ios-move" hidden></p>
+    </div>
+
+    <div class="pg-sec">
+      <h3>Пренеси прогреса</h3>
+      <p class="pg-text">Прогресът се пази само в този браузър. За да го пренесеш на друго устройство, запази го тук във файл или като код, а там го зареди.</p>
+      <div class="field" role="group" aria-labelledby="pg-out-label">
+        <span class="field-label" id="pg-out-label">Запази оттук</span>
+        <div class="actions pg-actions">
+          <button type="button" class="btn" id="pg-save">Запази във файл</button>
+          <button type="button" class="btn" id="pg-copy">Копирай като код</button>
+        </div>
+        <p class="pg-msg" id="pg-out-msg" aria-live="polite"></p>
+        <textarea class="pg-code" id="pg-code-out" rows="4" readonly hidden aria-label="Кодът с прогреса ти"></textarea>
+      </div>
+      <div class="field" role="group" aria-labelledby="pg-in-label">
+        <span class="field-label" id="pg-in-label">Зареди тук</span>
+        <div class="actions pg-actions">
+          <button type="button" class="btn" id="pg-file-btn">Зареди от файл</button>
+        </div>
+        <input type="file" id="pg-file" accept=".json,application/json" hidden>
+        <label class="pg-label" for="pg-code-in">Постави код</label>
+        <textarea class="pg-code" id="pg-code-in" rows="3" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="go" placeholder="VDL1.…"></textarea>
+        <div class="actions pg-actions">
+          <button type="button" class="btn" id="pg-code-load">Зареди</button>
+        </div>
+        <p class="pg-msg" id="pg-in-msg" aria-live="polite"></p>
+        <div class="feedback pg-confirm" id="pg-confirm" role="group" aria-labelledby="pg-confirm-q" aria-describedby="pg-from pg-now" tabindex="-1" hidden>
+          <p class="fb-line" id="pg-from"></p>
+          <p class="fb-line" id="pg-now"></p>
+          <p class="verdict" id="pg-confirm-q">Това ще замени прогреса на това устройство. Продължи?</p>
+          <div class="actions">
+            <button type="button" class="btn" id="pg-cancel">Отказ</button>
+            <button type="button" class="btn primary" id="pg-replace">Замени</button>
+          </div>
+        </div>
+      </div>
+      <p class="set-note">Файлът и кодът се правят на това устройство и не минават през мен.</p>
+      <p class="set-note">Изборът за статистиката не се пренася: на всяко устройство избираш отделно.</p>
+    </div>
+  </div>
+</dialog>
 <!-- progress:end -->
 
 <script src="analytics.js"></script>

@@ -4,8 +4,14 @@ const VERSION = 'v17';
 const CACHE = 'learn-french-' + VERSION;
 const CORE = ['./', 'index.html', 'fonts.css', 'fonts/literata-normal-latin.woff2', 'fonts/literata-normal-cyrillic.woff2', 'fonts/literata-italic-latin.woff2', 'fonts/literata-italic-cyrillic.woff2', 'fonts/onest-normal-latin.woff2', 'fonts/onest-normal-cyrillic.woff2', 'style.css', 'explain.css', 'when.css', 'aux.css', 'listen.css', 'progress.css', 'analytics.js', 'privacy.html', 'data.js', 'app.js', 'dictation.js', 'speaking.js', 'pairs.js', 'dialogues-data.js', 'dialogues.js', 'explain.js', 'when.js', 'aux.js', 'listen.js', 'progress.js', 'manifest.webmanifest', 'icon.svg', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 
+// install with fresh files from the network, not from the browser's HTTP cache, so a new
+// version never starts with an old copy of a file
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting()));
+  e.waitUntil(
+    caches.open(CACHE)
+      .then(c => c.addAll(CORE.map(u => new Request(u, { cache: 'reload' }))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', e => {
@@ -30,6 +36,7 @@ self.addEventListener('fetch', e => {
           return res;
         })
         .catch(() => cached);
+      try { e.waitUntil(fresh.then(() => {}, () => {})); } catch (err) {}   // let the background refresh finish
       return cached || fresh;
     })
   );
