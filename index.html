@@ -14,6 +14,11 @@
 <meta name="apple-mobile-web-app-title" content="Français">
 <link rel="stylesheet" href="fonts.css">
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="explain.css">
+<link rel="stylesheet" href="when.css">
+<link rel="stylesheet" href="aux.css">
+<link rel="stylesheet" href="listen.css">
+<link rel="stylesheet" href="progress.css">
 </head>
 <body>
 <section class="consent" id="consent" role="region" aria-labelledby="consent-title" hidden>
@@ -35,16 +40,17 @@
     <h1>Verbes des loisirs</h1>
     <p class="lede">Глаголите от урока в три времена. Чукни дума или форма, за да я чуеш. Частта, която се променя, е в <span class="end">червено</span>.</p>
     <p class="meta" id="meta"></p>
-    <p class="meta privacy-links"><a href="privacy.html">Поверителност</a><button type="button" class="linkbtn" data-consent-open hidden>Настройки за статистика</button></p>
+    <p class="meta privacy-links"><button type="button" class="linkbtn" id="progress-open">Запази прогреса</button><a href="privacy.html">Поверителност</a><button type="button" class="linkbtn" data-consent-open hidden>Настройки за статистика</button></p>
   </header>
 
   <div class="hint" id="hint" hidden></div>
+  <div class="app-note" id="app-note" hidden></div>
 
   <div class="tabs" role="tablist" aria-label="Изглед">
     <button type="button" role="tab" id="tab-verbs" aria-controls="view-verbs" aria-selected="true">Глаголи</button>
     <button type="button" role="tab" id="tab-dialogues" aria-controls="view-dialogues" aria-selected="false">Диалози</button>
     <button type="button" role="tab" id="tab-cards" aria-controls="view-cards" aria-selected="false">Карти</button>
-    <button type="button" role="tab" id="tab-pairs" aria-controls="view-pairs" aria-selected="false">Двойки</button>
+    <button type="button" role="tab" id="tab-games" aria-controls="view-games" aria-selected="false">Игри</button>
     <button type="button" role="tab" id="tab-dictation" aria-controls="view-dictation" aria-selected="false">Диктовка</button>
     <button type="button" role="tab" id="tab-speak" aria-controls="view-speak" aria-selected="false">Говор</button>
     <button type="button" role="tab" id="tab-test" aria-controls="view-test" aria-selected="false">Тест</button>
@@ -72,40 +78,49 @@
     <div id="dialogues"></div>
   </div>
 
-  <div id="view-pairs" role="tabpanel" aria-labelledby="tab-pairs" hidden>
-    <details class="settings">
-      <summary><span>Настройки</span><span class="sum" id="p-sum"></span></summary>
-      <div class="settings-body">
-        <div class="field">
-          <span class="field-label" id="lbl-p-mode">Игра</span>
-          <div class="seg" role="group" aria-labelledby="lbl-p-mode" id="p-mode"></div>
-          <p class="set-note">Свързване: всички плочки са открити – чукни двете, които си пасват. Памет: плочките са обърнати с лицето надолу и трябва да запомниш къде са.</p>
-        </div>
-        <div class="field">
-          <span class="field-label" id="lbl-p-kind">Вид двойки</span>
-          <div class="seg" role="group" aria-labelledby="lbl-p-kind" id="p-kind"></div>
-        </div>
-        <div class="field" id="p-tense-field">
-          <span class="field-label" id="lbl-p-tenses">Времена</span>
-          <div class="seg" role="group" aria-labelledby="lbl-p-tenses" id="p-tenses"></div>
-        </div>
-        <div class="field">
-          <span class="field-label" id="lbl-p-groups">Групи глаголи</span>
-          <div class="seg" role="group" aria-labelledby="lbl-p-groups" id="p-groups"></div>
-        </div>
-        <div class="field">
-          <span class="field-label" id="lbl-p-size">Брой двойки</span>
-          <div class="seg" role="group" aria-labelledby="lbl-p-size" id="p-size"></div>
-        </div>
-        <p class="set-note">Всяка промяна започва нова игра.</p>
-      </div>
-    </details>
+  <div id="view-games" role="tabpanel" aria-labelledby="tab-games" hidden>
+    <div class="seg game-picker" role="group" aria-label="Игра" id="game-picker"></div>
+    <p class="game-lede" id="game-lede"></p>
 
-    <div id="pairs"></div>
+    <div id="game-pairs" class="game-panel">
+      <details class="settings">
+        <summary><span>Настройки</span><span class="sum" id="p-sum"></span></summary>
+        <div class="settings-body">
+          <div class="field">
+            <span class="field-label" id="lbl-p-mode">Игра</span>
+            <div class="seg" role="group" aria-labelledby="lbl-p-mode" id="p-mode"></div>
+            <p class="set-note">Свързване: всички плочки са открити – чукни двете, които си пасват. Памет: плочките са обърнати с лицето надолу и трябва да запомниш къде са.</p>
+          </div>
+          <div class="field">
+            <span class="field-label" id="lbl-p-kind">Вид двойки</span>
+            <div class="seg" role="group" aria-labelledby="lbl-p-kind" id="p-kind"></div>
+          </div>
+          <div class="field" id="p-tense-field">
+            <span class="field-label" id="lbl-p-tenses">Времена</span>
+            <div class="seg" role="group" aria-labelledby="lbl-p-tenses" id="p-tenses"></div>
+          </div>
+          <div class="field">
+            <span class="field-label" id="lbl-p-groups">Групи глаголи</span>
+            <div class="seg" role="group" aria-labelledby="lbl-p-groups" id="p-groups"></div>
+          </div>
+          <div class="field">
+            <span class="field-label" id="lbl-p-size">Брой двойки</span>
+            <div class="seg" role="group" aria-labelledby="lbl-p-size" id="p-size"></div>
+          </div>
+          <p class="set-note">Всяка промяна започва нова игра.</p>
+        </div>
+      </details>
 
-    <p class="tip">
-      Часовникът тръгва с първото чукване и спира, докато си в друг раздел. Най-доброто ти време се пази отделно за всяка игра, вид и брой двойки. При „Превод“ чукни френския глагол, за да го чуеш. В „Памет“ се брои за грешка само обръщане, което е можело да се избегне.
-    </p>
+      <div id="pairs"></div>
+
+      <p class="tip">
+        Часовникът тръгва с първото чукване и спира, докато си в друг раздел. Най-доброто ти време се пази отделно за всяка игра, вид и брой двойки. При „Превод“ чукни френския глагол, за да го чуеш. В „Памет“ се брои за грешка само обръщане, което е можело да се избегне.
+      </p>
+    </div>
+
+    <div id="game-when" class="game-panel" hidden><div id="when"></div></div>
+    <div id="game-aux" class="game-panel" hidden><div id="aux"></div></div>
+    <div id="game-listen" class="game-panel" hidden><div id="listen"></div></div>
   </div>
 
   <div id="view-cards" role="tabpanel" aria-labelledby="tab-cards" hidden>
@@ -241,7 +256,9 @@
   <button type="button" class="linkbtn" id="consent-open" data-consent-open hidden>Настройки за статистика</button>
 </footer>
 
-
+<!-- progress:start -->
+<dialog id="progress-dialog" aria-labelledby="progress-title"></dialog>
+<!-- progress:end -->
 
 <script src="analytics.js"></script>
 <script src="data.js"></script>
@@ -251,5 +268,10 @@
 <script src="pairs.js"></script>
 <script src="dialogues-data.js"></script>
 <script src="dialogues.js"></script>
+<script src="explain.js"></script>
+<script src="when.js"></script>
+<script src="aux.js"></script>
+<script src="listen.js"></script>
+<script src="progress.js"></script>
 </body>
 </html>

@@ -381,7 +381,7 @@ bS.addEventListener('click', () => setSlow(true));
 setSlow(slow);
 
 /* ---------- tabs ---------- */
-const VIEWS = ['verbs', 'dialogues', 'cards', 'pairs', 'dictation', 'speak', 'test'];
+const VIEWS = ['verbs', 'dialogues', 'cards', 'games', 'dictation', 'speak', 'test'];
 let currentView = 'verbs';
 function showView(name) {
   currentView = name;
@@ -391,9 +391,43 @@ function showView(name) {
   });
   stopAll();
   save('verbes-view', name);
-  gaView(name, $('tab-' + name).textContent);
+  if (name === 'games') gaGame();
+  else gaView(name, $('tab-' + name).textContent);
 }
 VIEWS.forEach(v => $('tab-' + v).addEventListener('click', () => showView(v)));
+
+/* ---------- games: one tab, several games ---------- */
+/* Each game lives in #game-<id>. Switching games fires a "gamechange" event
+   ({ from, to }) on document, so a game can stop its timers and sounds;
+   gameShown(id) says whether a game is on screen right now. */
+const GAMES = [
+  ['pairs', 'Двойки', 'Свържи френското с българското или лицето с формата.'],
+  ['when', 'Кога?', 'Виждаш кога става действието и сам избираш времето.'],
+  ['aux', 'Être или avoir?', 'Кой спомагателен глагол е и как се пише причастието.'],
+  ['listen', 'Чуй и разбери', 'Слушаш, без да виждаш текста, и избираш какво си чул.']
+];
+const GAME_IDS = GAMES.map(g => g[0]);
+let currentGame = GAME_IDS.includes(load('igri-game', 'pairs')) ? load('igri-game', 'pairs') : 'pairs';
+const gameShown = id => currentView === 'games' && currentGame === id;
+const gameLabel = id => GAMES.find(g => g[0] === id)[1];
+function gaGame() { gaView('games-' + currentGame, 'Игри · ' + gameLabel(currentGame)); }
+function renderGamePicker() {
+  $('game-picker').replaceChildren(...GAMES.map(([id, label]) => toggleBtn(label, id === currentGame, () => showGame(id))));
+  $('game-lede').textContent = GAMES.find(g => g[0] === currentGame)[2];
+}
+function showGame(id) {
+  const from = currentGame;
+  currentGame = id;
+  GAME_IDS.forEach(g => { $('game-' + g).hidden = g !== id; });
+  renderGamePicker();
+  save('igri-game', id);
+  if (from === id) return;
+  stopAll();
+  document.dispatchEvent(new CustomEvent('gamechange', { detail: { from, to: id } }));
+  if (currentView === 'games') gaGame();
+}
+GAME_IDS.forEach(g => { $('game-' + g).hidden = g !== currentGame; });
+renderGamePicker();
 
 /* the tab row scrolls sideways when it does not fit: fade the edge with more tabs,
    and keep the chosen tab in view */
@@ -1160,13 +1194,11 @@ renderCardSettings();
 startCards();
 
 let startView = load('verbes-view', 'verbs');
+if (startView === 'pairs') { startView = 'games'; showGame('pairs'); }   // "Двойки" used to be its own tab
 if (!VIEWS.includes(startView)) startView = 'verbs';
-if (location.hash === '#test') startView = 'test';
-if (location.hash === '#cards') startView = 'cards';
-if (location.hash === '#dictation') startView = 'dictation';
-if (location.hash === '#speak') startView = 'speak';
-if (location.hash === '#pairs') startView = 'pairs';
-if (location.hash === '#dialogues') startView = 'dialogues';
+const hashView = location.hash.slice(1);
+if (VIEWS.includes(hashView)) startView = hashView;
+if (GAME_IDS.includes(hashView)) { startView = 'games'; showGame(hashView); }
 showView(startView);
 stopAll();
 requestAnimationFrame(showActiveTab);

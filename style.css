@@ -891,3 +891,8 @@ html.consent-open .dl-keys { position: static; }
   .consent-text { gap: .4rem; }
   .consent p { font-size: .86rem; }
 }
+
+/* ---------- Games tab: pick a game ---------- */
+.game-picker { margin-top: 1rem; }
+.game-lede { margin: .6rem 0 0; color: var(--muted); font-size: .92rem; }
+.game-panel > .settings:first-child, .game-panel > :first-child { margin-top: 1rem; }

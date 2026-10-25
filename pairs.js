@@ -356,12 +356,13 @@ function prEnd() {
   card.scrollIntoView({ block: 'nearest' });
 }
 
-/* the clock stops while the tab is not shown or the app is in the background */
-VIEWS.filter(v => v !== 'pairs').forEach(v => $('tab-' + v).addEventListener('click', prPause));
-$('tab-pairs').addEventListener('click', prResume);
+/* the clock stops while the game is not shown or the app is in the background */
+const prFollow = () => (gameShown('pairs') ? prResume() : prPause());
+VIEWS.forEach(v => $('tab-' + v).addEventListener('click', prFollow));
+document.addEventListener('gamechange', prFollow);
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) prPause();
-  else if (currentView === 'pairs') prResume();
+  else if (gameShown('pairs')) prResume();
 });
 
 renderPrSettings();
