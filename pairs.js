@@ -357,13 +357,12 @@ function prEnd() {
 }
 
 /* the clock stops while the game is not shown or the app is in the background */
-const prFollow = () => (gameShown('pairs') ? prResume() : prPause());
+// it runs only while the game is on screen, the app is in front and no dialog covers it
+const prCanPlay = () => gameShown('pairs') && !document.hidden && !document.querySelector('dialog[open]');
+const prFollow = () => (prCanPlay() ? prResume() : prPause());
 VIEWS.forEach(v => $('tab-' + v).addEventListener('click', prFollow));
 document.addEventListener('gamechange', prFollow);
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) prPause();
-  else if (gameShown('pairs')) prResume();
-});
+document.addEventListener('visibilitychange', prFollow);
 
 renderPrSettings();
 prStart(null);

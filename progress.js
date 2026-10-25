@@ -286,7 +286,11 @@ let pgOpener = null;
 function pgOpen(from) {
   if (pgDialog.open) return;
   pgOpener = from || pgOpenBtn;
+  // the dialog covers the app: stop what plays or listens there, as when the app goes to the background
   stopAll();
+  spRelease();
+  dlPauseRole();
+  dlRelease();
   pgRenderInstall();
   pgCancel(false);
   pgSay(pgOutMsg, '', '');
@@ -295,10 +299,13 @@ function pgOpen(from) {
   pgCodeOut.value = '';
   pgDialog.showModal();
   pgDialog.scrollTop = 0;
+  prFollow();   // the Двойки clock waits while the dialog is open
 }
 pgOpenBtn.addEventListener('click', () => pgOpen(pgOpenBtn));
 $('pg-close').addEventListener('click', () => pgDialog.close());
 pgDialog.addEventListener('close', () => {
+  prFollow();
+  if (currentView === 'dialogues' && dl.rolePaused && dl.cur) dlOpen(dl.cur, 'role');
   pgPending = null;
   pgConfirm.hidden = true;
   const back = pgOpener && pgOpener.isConnected && !pgOpener.closest('[hidden]') ? pgOpener : pgOpenBtn;

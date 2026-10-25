@@ -1,3 +1,4 @@
+/* File name: not "aux.js", because AUX is a reserved name on Windows. */
 /* "Être или avoir?": which auxiliary a verb takes in passé composé, and how the participle
    is spelled. Renders into #aux (panel #game-aux).
    (A) "Être или avoir?": a verb and two buttons, être and avoir.
@@ -145,8 +146,8 @@ function axBuild() {
 function axAuxRule(it) {
   if (it.aux === 'e') {
     if (isReflexive(it.inf)) return it.inf + ' е с être: всички възвратни глаголи са с être.';
-    if (it.inf === 'rester') return 'rester е с être, като глаголите за движение и промяна (aller, venir, partir, arriver…).';
-    return it.inf + ' е с être: глаголите за движение и промяна (aller, venir, partir, arriver…) и всички възвратни глаголи.';
+    if (it.inf === 'rester') return 'rester е с être, като малкото глаголи за движение с être (aller, venir, partir, arriver…).';
+    return it.inf + ' е с être: един от малкото глаголи за движение и промяна с être (aller, venir, partir, arriver…).';
   }
   let s = it.inf + ' е с avoir, като повечето глаголи.';
   if (AX_MOVE_AVOIR.has(it.inf)) s += ' С être са само някои глаголи за движение: aller, venir, partir, arriver…';
@@ -155,7 +156,7 @@ function axAuxRule(it) {
 }
 function axPpRule(q) {
   if (q.it.aux === 'e') return 'С être причастието се съгласува с подлога: ' + q.subj.name + ' (' + q.subj.bg + ') → ' + q.correct + '.';
-  return 'С avoir причастието не се променя: ' + q.before + q.correct + '.';
+  return 'С avoir причастието не се променя: ' + q.subj.name + ' (' + q.subj.bg + ') → ' + q.correct + '.';
 }
 function axSpeech(q) {
   return q.type === 'aux' ? formText(axExample(q.it)) : q.before + q.correct + q.after;
@@ -222,7 +223,7 @@ function axSetup() {
 
   const tip = el('p', 'tip');
   tip.append(el('b', null, 'Être или avoir? '),
-    'С être са глаголите за движение и промяна (aller, venir, partir, arriver, rester…) и всички възвратни: je me suis levé. Останалите са с avoir: j\'ai joué. ',
+    'С être са само около 15 глагола, най-вече за движение или промяна (aller, venir, partir, arriver, rester, naître, mourir…), и всички възвратни: je me suis levé. Всички други са с avoir, дори за движение или промяна: j\'ai voyagé, j\'ai grandi, j\'ai joué. ',
     el('b', null, 'Как се пише? '),
     'С être причастието се съгласува с подлога: +e за женски род, +s за множествено число (Léa est partie, Léa et Chloé sont parties). Смесена група е като мъжки род: Léa et Marc sont partis. С avoir причастието не се променя: Léa a dansé. С клавиатура: 1–4 избира отговор.');
   axRoot.replaceChildren(set, axPlay, tip);

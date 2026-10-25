@@ -100,8 +100,9 @@ function xpKind(role, t, R, T, P) {
   return T === tense && mine ? kind : null;
 }
 
-const xpNames = ps => {
-  const n = ps.map(p => SUBJ[p]);
+// fem: a feminine être participle (est allée, sont parties) is the form for elle / elles, not il / ils
+const xpNames = (ps, fem) => {
+  const n = ps.map(p => (fem && p === 2 ? 'elle' : fem && p === 5 ? 'elles' : SUBJ[p]));
   return n.length < 2 ? n.join('') : n.slice(0, -1).join(', ') + ' и ' + n[n.length - 1];
 };
 const xpTense = t => TENSE[t].label.toLowerCase();
@@ -148,9 +149,11 @@ function explainMistake(q, given) {
   let text;
   if (r.kind === 'person') {
     const R = [...new Set(r.R)].sort();
+    const pp0 = strip(norm(v.pp)), last = strip(g[g.length - 1] || '');
+    const fem = r.t === 'pc' && v.aux === 'e' && last.startsWith(pp0) && /^es?$/.test(last.slice(pp0.length));
     text = known
-      ? 'Това е формата за ' + xpNames(R) + '. За ' + SUBJ[q.p] + ' е: ' + (isReflexive(inf) ? full : answer) + '.'
-      : 'Тази форма е за ' + xpNames(R) + '. Виж кой е подлогът в изречението.';
+      ? 'Това е формата за ' + xpNames(R, fem) + '. За ' + SUBJ[q.p] + ' е: ' + (isReflexive(inf) ? full : answer) + '.'
+      : 'Тази форма е за ' + xpNames(R, fem) + '. Виж кой е подлогът в изречението.';
   } else if (r.kind === 'tense') {
     text = 'Това е ' + xpTense(r.t) + ', а тук трябва ' + xpTense(T) + ': ' + full + '.';
   } else if (r.kind === 'aux') {

@@ -24,7 +24,7 @@ const TENSE = Object.fromEntries(TENSES.map(t => [t.id, t]));
 const TENSE_NOTE = {
   pc: ['Как се образува', [
     ['j\'ai joué', 'avoir в сегашно време + минало причастие'],
-    ['je suis allé', 'с être: глаголите за движение (aller, venir, partir, sortir…) и всички възвратни'],
+    ['je suis allé', 'с être: само някои глаголи за движение (aller, venir, partir, sortir…) и всички възвратни'],
     ['elle est allée', 'с être причастието се съгласува: +e за женски род, +s за множествено число'],
     ['je me suis réuni', 'при възвратните местоимението е пред être']
   ]],
@@ -411,8 +411,11 @@ let currentGame = GAME_IDS.includes(load('igri-game', 'pairs')) ? load('igri-gam
 const gameShown = id => currentView === 'games' && currentGame === id;
 const gameLabel = id => GAMES.find(g => g[0] === id)[1];
 function gaGame() { gaView('games-' + currentGame, 'Игри · ' + gameLabel(currentGame)); }
+// the buttons are made once and only change their pressed state, so keyboard focus stays on them
+const gameBtns = GAMES.map(([id, label]) => toggleBtn(label, false, () => showGame(id)));
+$('game-picker').replaceChildren(...gameBtns);
 function renderGamePicker() {
-  $('game-picker').replaceChildren(...GAMES.map(([id, label]) => toggleBtn(label, id === currentGame, () => showGame(id))));
+  GAMES.forEach(([id], k) => gameBtns[k].setAttribute('aria-pressed', String(id === currentGame)));
   $('game-lede').textContent = GAMES.find(g => g[0] === currentGame)[2];
 }
 function showGame(id) {

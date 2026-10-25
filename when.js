@@ -1,8 +1,8 @@
-/* "Кога?": a time word (hier, maintenant, demain…) + person + verb; the learner picks the tense
+/* "Кога?": a time word (hier, en ce moment, demain…) + person + verb; the learner picks the tense
    and types the form. Renders into #when (panel #game-when). */
 
 /* Time words that decide the tense on their own: [French, tense, Bulgarian, for présent: now | habit].
-   Words that fit more than one tense (aujourd'hui, ce soir, ce matin, ce week-end, cet été,
+   Words that fit more than one tense (aujourd'hui, maintenant, ce soir, ce matin, ce week-end, cet été,
    bientôt) are left out on purpose. */
 const WN_TIME = [
   ['hier', 'pc', 'вчера'],
@@ -21,7 +21,6 @@ const WN_TIME = [
   ['il y a deux jours', 'pc', 'преди два дни'],
   ['il y a une semaine', 'pc', 'преди седмица'],
 
-  ['maintenant', 'pr', 'сега', 'now'],
   ['en ce moment', 'pr', 'в момента', 'now'],
   ["d'habitude", 'pr', 'обикновено', 'habit'],
   ['tous les jours', 'pr', 'всеки ден', 'habit'],
@@ -85,6 +84,8 @@ function wnBuild() {
 /* The screen shows only the subject (je, tu, il…), the same in every tense: "j'" or a
    reflexive "je me" in front of the gap would give the tense away. So the answer is the
    form without the subject: ai joué, me suis réuni(e), vais jouer. */
+// "je / j'" for je in every tense, so the screen never reads "je ai joué" and still hides the tense
+const wnSubj = p => (p === 0 ? "je / j'" : SUBJ[p]);
 function wnVerbPart(f, p) {
   const full = formText(f), s = SUBJ[p];
   if (full.startsWith(s + ' ')) return full.slice(s.length + 1);
@@ -116,8 +117,12 @@ function wnJudge(q, val) {
   if (m === 'exact') return { verdict: 'ok', kind: 'exact' };
   if (m === 'near') return { verdict: 'near', kind: 'accent' };
   // the same person in another tense
+  // "je ai joué" for "j'ai joué": the right form, but je must become j' before a vowel
+  if (q.p === 0 && formText(q.form).startsWith("j'") && /^\s*je\s+/i.test(val)
+      && wnMatch(wnCands(q.form, 0), "j'" + val.replace(/^\s*je\s+/i, ''))) return { verdict: 'bad', kind: 'elision' };
   const other = TENSE_IDS.find(t => t !== q.tense && wnMatch(wnCands(forms(q.inf, t)[q.p], q.p, true), val));
-  if (other === 'pr' && q.tense === 'fp') return { verdict: 'near', kind: 'fp-pr' };
+  // présent for the future is fine French, but only when it is complete (with me / te / se)
+  if (other === 'pr' && q.tense === 'fp' && wnMatch(wnCands(forms(q.inf, 'pr')[q.p], q.p), val)) return { verdict: 'near', kind: 'fp-pr' };
   if (other) return { verdict: 'bad', kind: 'tense' };
   // a reflexive verb without its me / te / se
   if (isReflexive(q.inf)) {
@@ -165,9 +170,9 @@ const wnEls = (() => {
   const quiz = el('div');
   const tip = el('p', 'tip');
   ['Минало (hier, samedi dernier) → passé composé: j\'ai joué.',
-    'Сега и навик (maintenant, d\'habitude, le samedi) → présent: je joue.',
+    'Сега и навик (en ce moment, d\'habitude, le samedi) → présent: je joue.',
     'Бъдеще (demain, samedi prochain) → futur proche: je vais jouer.',
-    'Пиши глагола без je, tu, il… (ai joué), а при възвратните и me, te, se (me suis réuni).'
+    'Пиши глагола без je, tu, il… (ai joué). При възвратните пиши и me, te, se: me suis réuni.'
   ].forEach((t, k) => { if (k) tip.appendChild(el('br')); tip.append(t); });
   wnRoot.replaceChildren(set, quiz, tip);
   return { groups, count, short, sum, quiz };
@@ -240,10 +245,10 @@ function wnRenderQ(focus) {
   input.setAttribute('spellcheck', 'false');
   input.setAttribute('enterkeyhint', 'go');
   input.setAttribute('lang', 'fr');
-  input.setAttribute('aria-label', 'Формата на ' + q.inf + ' за ' + SUBJ[q.p] + ' (' + wnCap(q.tw[0]) + ')');
+  input.setAttribute('aria-label', 'Формата на ' + q.inf + ' за ' + wnSubj(q.p) + ' (' + wnCap(q.tw[0]) + ')');
   const line = el('p', 'qline');
   line.lang = 'fr';
-  line.append(el('span', 'pr', SUBJ[q.p] + ' '), input);
+  line.append(el('span', 'pr', wnSubj(q.p) + ' '), input);
   card.append(time, el('p', 'bgline', q.tw[2]), head, line);
 
   const keys = el('div', 'keys');
@@ -347,6 +352,7 @@ function wnCheck(ui, gaveUp) {
     verdict('bad', 'Грешно.');
     answer('Правилно е');
     if (r.kind === 'why') note('Защо: ' + r.why, 'fb-why');
+    else if (r.kind === 'elision') note('Защо: пред гласна или h „je“ става „j\'“: ' + formText(q.form) + '.', 'fb-why');
     else if (r.kind === 'refl') note('Защо: глаголът е възвратен, затова трябва и „' + REFL[q.p] + '“.', 'fb-why');
     else note(wnRule(q));
   }
@@ -394,7 +400,7 @@ function wnResult() {
     const ul = el('ul');
     wn.wrong.forEach(({ q, given }) => {
       const li = el('li');
-      li.appendChild(el('span', 'm-prompt', wnCap(q.tw[0]) + ', ' + SUBJ[q.p] + ' ___ (' + q.inf + ') · ' + TENSE[q.tense].label));
+      li.appendChild(el('span', 'm-prompt', wnCap(q.tw[0]) + ', ' + wnSubj(q.p) + ' ___ (' + q.inf + ') · ' + TENSE[q.tense].label));
       if (given) {
         const g = el('span', 'm-prompt');
         g.append(document.createTextNode('Твоят отговор: '), el('span', 'given', given));

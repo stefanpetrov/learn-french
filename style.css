@@ -896,3 +896,176 @@ html.consent-open .dl-keys { position: static; }
 .game-picker { margin-top: 1rem; }
 .game-lede { margin: .6rem 0 0; color: var(--muted); font-size: .92rem; }
 .game-panel > .settings:first-child, .game-panel > :first-child { margin-top: 1rem; }
+
+/* ---------- "Защо е грешно" ---------- */
+/* the rule behind a wrong answer (Test feedback, its mistakes list, Кога?) */
+.fb-why {
+  margin: 0;
+  padding-left: .6rem;
+  border-left: 2px solid var(--rule-strong);
+  font-size: .92rem;
+  line-height: 1.45;
+  color: var(--muted);
+  overflow-wrap: break-word;
+}
+.mistakes .fb-why { margin-top: .15rem; font-size: .88rem; }
+
+/* ---------- "Кога?" ---------- */
+.wn-time { overflow-wrap: anywhere; }
+/* tap targets of at least 44px */
+#when .toggle { min-height: 44px; min-width: 44px; }
+#when .feedback .form, #when .mistakes .form, #when .ans { min-height: 44px; }
+
+/* ---------- "Être или avoir?" ---------- */
+.aux-opts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
+.aux-opt {
+  font: inherit;
+  font-family: var(--f-display);
+  font-weight: 600;
+  font-size: clamp(1rem, 4.6vw, 1.2rem);
+  line-height: 1.25;
+  min-height: 52px;
+  padding: .45rem .4rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.aux-two .aux-opt { font-size: 1.5rem; min-height: 72px; }
+.aux-opt:enabled:hover { border-color: var(--ink); background: var(--ink-soft); }
+.aux-opt:disabled { cursor: default; opacity: .5; }
+.aux-opt.ok, .aux-opt.bad { opacity: 1; box-shadow: inset 0 0 0 1px currentColor; }
+.aux-opt.ok { border-color: var(--ok); color: var(--ok); }
+.aux-opt.bad { border-color: var(--margin); color: var(--margin); text-decoration: line-through; }
+.aux-blank {
+  display: inline-block;
+  min-width: 4.5em;
+  padding: 0 .3rem;
+  border-bottom: 2px solid var(--ink);
+  border-radius: 4px 4px 0 0;
+  background: var(--ink-soft);
+  line-height: 1.5;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: center;
+}
+.aux-blank.ok { color: var(--ok); border-bottom-color: var(--ok); }
+.aux-blank.bad { color: var(--margin); border-bottom-color: var(--margin); text-decoration: line-through; }
+.aux-rule { color: var(--fg); }
+.tag.aux-new { color: var(--muted); font-family: var(--f-body); font-weight: 500; }
+/* tap targets of at least 44px in this game */
+#aux .toggle, #aux .form, #aux .sbtn { min-height: 44px; }
+
+/* ---------- "Чуй и разбери" ---------- */
+/* the first "Чуй" of a round: one big button, before any sound */
+.ls-big { flex: 1 1 100%; justify-content: center; min-height: 60px; font-size: 1.2rem; }
+.ls-opts { display: grid; gap: .5rem; }
+@media (min-width: 34rem) { .ls-opts { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.ls-opt {
+  font: inherit;
+  font-weight: 600;
+  line-height: 1.25;
+  min-height: 56px;
+  padding: .45rem .6rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.ls-opt.ls-fr { font-family: var(--f-display); font-size: 1.15rem; }
+.ls-sub { display: block; font-weight: 500; font-size: .82rem; color: var(--muted); }
+.ls-opt:enabled:hover { border-color: var(--ink); background: var(--ink-soft); }
+.ls-opt:disabled { cursor: default; opacity: .5; }
+.ls-opt.ok, .ls-opt.bad { opacity: 1; box-shadow: inset 0 0 0 1px currentColor; }
+.ls-opt.ok { border-color: var(--ok); color: var(--ok); }
+.ls-opt.bad { border-color: var(--margin); color: var(--margin); text-decoration: line-through; }
+.ls-opt.ok .ls-sub, .ls-opt.bad .ls-sub { color: inherit; }
+.ls-why { color: var(--fg); }
+/* tap targets of at least 44px */
+#listen .toggle { min-height: 44px; }
+#listen .feedback .form, #listen .mistakes .form { min-height: 44px; }
+
+/* ---------- "Запази прогреса": dialog and notices ---------- */
+:root { --pg-veil: color-mix(in srgb, var(--fg) 50%, transparent); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --pg-veil: color-mix(in srgb, var(--paper) 80%, transparent); }
+}
+:root[data-theme="dark"] { --pg-veil: color-mix(in srgb, var(--paper) 80%, transparent); }
+
+.pg-dialog {
+  width: min(34rem, calc(100% - 24px));
+  max-width: none;
+  max-height: calc(100vh - 24px);
+  max-height: calc(100dvh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  padding: 0;
+  border: 1px solid var(--rule-strong);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--fg);
+  box-shadow: 0 10px 30px rgb(0 0 0 / .2);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.pg-dialog::backdrop { background: var(--pg-veil, rgb(0 0 0 / .45)); }
+.pg-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  padding: .6rem .75rem .6rem 1.1rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--rule);
+}
+.pg-head h2 { font-size: 1.3rem; min-width: 0; }
+.pg-head .btn { flex: none; padding-inline: 1rem; }
+.pg-body { padding: 0 1.1rem 1.1rem; display: grid; gap: .25rem; }
+.pg-sec { display: grid; gap: .6rem; padding-top: 1rem; }
+.pg-sec + .pg-sec { margin-top: .5rem; border-top: 1px solid var(--rule); }
+.pg-sec h3 { margin: 0; font-family: var(--f-display); font-style: italic; font-weight: 500; font-size: 1.15rem; }
+.pg-text { margin: 0; }
+.pg-text:focus, .pg-confirm:focus { outline: none; }
+.pg-actions { justify-content: flex-start; }
+.pg-msg { margin: 0; font-size: .92rem; }
+.pg-msg:empty { display: none; }
+.pg-label { font-size: .92rem; font-weight: 600; margin-top: .3rem; }
+.pg-code {
+  display: block;
+  width: 100%;
+  font: inherit;
+  font-size: 1rem;            /* 16px: iPhone does not zoom in on the field */
+  line-height: 1.4;
+  color: var(--fg);
+  background: var(--paper);
+  border: 1px solid var(--rule-strong);
+  border-radius: 8px;
+  padding: .45rem .6rem;
+  resize: vertical;
+  word-break: break-all;
+}
+.pg-code:focus { outline: 2px solid var(--margin); outline-offset: 1px; }
+.pg-code::placeholder { color: var(--muted); }
+.pg-confirm { gap: .5rem; }
+.pg-confirm .fb-line { display: block; }
+.pg-dialog .set-note { overflow-wrap: anywhere; }
+
+.app-note {
+  margin-top: 1rem;
+  padding: .75rem 1rem;
+  border-radius: 8px;
+  background: var(--ink-soft);
+  border: 1px solid var(--rule-strong);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem 1rem;
+}
+.app-note-text { margin: 0; flex: 1 1 14rem; font-size: .95rem; }
+.app-note-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.app-note .btn { padding-inline: 1rem; }
