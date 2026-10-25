@@ -394,6 +394,39 @@ function showView(name) {
 }
 VIEWS.forEach(v => $('tab-' + v).addEventListener('click', () => showView(v)));
 
+/* the tab row scrolls sideways when it does not fit: fade the edge with more tabs,
+   and keep the chosen tab in view */
+const tabsBar = document.querySelector('.tabs');
+function updateTabsFade() {
+  const max = tabsBar.scrollWidth - tabsBar.clientWidth;
+  tabsBar.classList.toggle('more-left', max > 1 && tabsBar.scrollLeft > 1);
+  tabsBar.classList.toggle('more-right', max > 1 && tabsBar.scrollLeft < max - 1);
+}
+function showActiveTab() {
+  const b = $('tab-' + currentView);
+  if (!b || tabsBar.scrollWidth <= tabsBar.clientWidth) { updateTabsFade(); return; }
+  const left = b.offsetLeft - tabsBar.offsetLeft, right = left + b.offsetWidth;
+  if (left < tabsBar.scrollLeft + 16) tabsBar.scrollLeft = Math.max(0, left - 24);
+  else if (right > tabsBar.scrollLeft + tabsBar.clientWidth - 16) tabsBar.scrollLeft = right - tabsBar.clientWidth + 24;
+  updateTabsFade();
+}
+tabsBar.addEventListener('scroll', updateTabsFade, { passive: true });
+window.addEventListener('resize', showActiveTab);
+VIEWS.forEach(v => $('tab-' + v).addEventListener('click', showActiveTab));
+// arrow keys move between tabs, as in a tab list
+tabsBar.addEventListener('keydown', e => {
+  if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+  const k = VIEWS.indexOf(currentView);
+  const order = [...tabsBar.querySelectorAll('button')].map(b => b.id.replace('tab-', ''));
+  const i = order.indexOf(currentView);
+  const next = order[(i + (e.key === 'ArrowRight' ? 1 : order.length - 1)) % order.length];
+  if (k < 0 || !next) return;
+  e.preventDefault();
+  e.stopPropagation();
+  $('tab-' + next).click();
+  $('tab-' + next).focus();
+});
+
 /* ---------- answer checking ---------- */
 function norm(s) {
   return s.normalize('NFC').toLowerCase().replace(/[’‘`´ʼ＇]/g, "'").replace(/[\u2010-\u2013\u2212]/g, '-').replace(/\s+/g, ' ').replace(/ ?' ?/g, "'").trim();
@@ -1133,6 +1166,8 @@ if (location.hash === '#pairs') startView = 'pairs';
 if (location.hash === '#dialogues') startView = 'dialogues';
 showView(startView);
 stopAll();
+requestAnimationFrame(showActiveTab);
+document.fonts && document.fonts.ready.then(showActiveTab);
 
 // no sound when the app goes to the background
 document.addEventListener('visibilitychange', () => { if (document.hidden) stopAll(); });

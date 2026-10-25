@@ -637,7 +637,6 @@ footer, .tip {
   .fc-inner, .fcard { transition: none; }
 }
 @media (max-width: 420px) {
-  .tabs button { padding-inline: .95rem; }
   .face { --m: 1.9rem; padding-left: calc(var(--m) + .9rem); }
 }
 
@@ -706,14 +705,23 @@ footer, .tip {
 .dk-extra { color: var(--margin); text-decoration: line-through; }
 .dk-given { font-family: var(--f-display); }
 
-/* seven tabs: one row on wide screens, two rows on a phone */
-.tabs { flex-wrap: wrap; justify-content: center; }
-@media (max-width: 720px) {
-  .tabs { width: 100%; border-radius: 22px; }
-  .tabs button { flex: 1 1 auto; padding-inline: .5rem; }
+/* seven tabs in one row: spread over the full width, and on a narrow phone the row
+   scrolls sideways (the edge fades where more tabs are hidden) */
+.tabs {
+  width: 100%;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  scroll-padding-inline: .5rem;
 }
+.tabs::-webkit-scrollbar { display: none; }
+.tabs button { flex: 1 0 auto; white-space: nowrap; padding-inline: .75rem; }
+.tabs.more-right { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent); }
+.tabs.more-left { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 2.5rem), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 2.5rem), transparent); }
+.tabs.more-left.more-right { -webkit-mask-image: linear-gradient(to right, transparent, #000 2.5rem, #000 calc(100% - 2.5rem), transparent); mask-image: linear-gradient(to right, transparent, #000 2.5rem, #000 calc(100% - 2.5rem), transparent); }
 @media (max-width: 480px) {
-  .tabs button { padding-inline: .3rem; font-size: .88rem; }
+  .tabs button { padding-inline: .7rem; font-size: .9rem; }
 }
 .ans.dk-ans.bad { text-decoration: none; }
 
