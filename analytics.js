@@ -21,10 +21,14 @@ const APP_PATH = location.pathname.replace(/[^/]*$/, ''); // /learn-french/
 
 function consentChoice() {
   try {
-    const c = JSON.parse(localStorage.getItem(CONSENT_KEY));
+    const raw = localStorage.getItem(CONSENT_KEY);
+    if (raw === null) return null;
+    const c = JSON.parse(raw);
     const age = c && typeof c.t === 'number' ? Date.now() - c.t : -1;
     if (c && typeof c.a === 'boolean' && age >= 0 && age < CONSENT_MAX_AGE) return c.a;
   } catch (e) {}
+  // expired or broken: forget it (other tabs get a storage event and ask again too)
+  try { localStorage.removeItem(CONSENT_KEY); } catch (e) {}
   return null;
 }
 function saveConsent(a) {
@@ -87,6 +91,15 @@ function track(event, params) {
   if (!gaOn()) return;
   gtag('event', event, params || {});
 }
+// the tab on screen right now (app.js defines currentView)
+function gaViewCurrent() {
+  if (typeof currentView !== 'undefined') gaView(currentView, document.getElementById('tab-' + currentView)?.textContent);
+}
+// the random number in the _ga cookie, so a visitor can quote it to ask for their data
+function gaClientId() {
+  const m = document.cookie.match(/(?:^|;\s*)_ga=GA\d+\.\d+\.(\d+\.\d+)/);
+  return m ? m[1] : '';
+}
 
 /* ---------- banner ---------- */
 let consentReturn = null;   // the control that opened the banner; null when it was shown on load
@@ -104,25 +117,39 @@ function consentBanner(show) {
   if (!box) return;
   box.hidden = !show;
   if (show) {
-    document.getElementById('consent-state').textContent = consentNow === true ? 'Сега статистиката е включена.'
+    const id = consentNow === true ? gaClientId() : '';
+    document.getElementById('consent-state').textContent = consentNow === true
+      ? 'Сега статистиката е включена.' + (id ? ' Номерът ти в статистиката: ' + id + '.' : '')
       : consentNow === false ? 'Сега статистиката е изключена.' : '';
+    box.querySelector('.consent-text').scrollTop = 0;   // the state line first
   }
   consentSpace();
 }
-function consentAnswer(yes) {
-  consentNow = yes;
-  saveConsent(yes);
+// hide the banner; if focus was in it, give it back to the button that opened it
+// (a banner shown on load just closes)
+function consentClose() {
+  const box = document.getElementById('consent');
+  const had = !!box && !box.hidden && box.contains(document.activeElement);
   consentBanner(false);
-  if (yes) {
+  const back = consentReturn;
+  consentReturn = null;
+  if (had && back && !back.hidden) back.focus({ preventScroll: true });
+}
+// start or stop Google Analytics after consentNow changed from `was`
+function consentApply(was) {
+  if (consentNow === true) {
     gaEnable();
-    if (typeof currentView !== 'undefined') gaView(currentView, document.getElementById('tab-' + currentView)?.textContent);
+    if (was !== true) gaViewCurrent();   // count the tab on screen once, not again on every "Приемам"
   } else {
     gaDisable();
   }
-  // back to the button that opened the settings; a banner shown on load just closes
-  const back = consentReturn;
-  consentReturn = null;
-  if (back && !back.hidden) back.focus({ preventScroll: true });
+}
+function consentAnswer(yes) {
+  const was = consentNow;
+  consentNow = yes;
+  saveConsent(yes);
+  consentApply(was);
+  consentClose();
 }
 function consentOpen(from) {
   consentReturn = from || null;
@@ -141,13 +168,24 @@ function consentOpen(from) {
   const box = document.getElementById('consent');
   if ('ResizeObserver' in window) new ResizeObserver(consentSpace).observe(box);
   else window.addEventListener('resize', consentSpace);
-  // a choice made in another tab or in the installed app applies here at once
+  // the exercises move focus without scrolling: keep a focused control out from under the open banner
+  document.addEventListener('focusin', e => {
+    const el = e.target;
+    if (box.hidden || box.contains(el)) return;
+    requestAnimationFrame(() => {        // after the exercise's own scrollIntoView
+      if (box.hidden || document.activeElement !== el) return;
+      const r = el.getBoundingClientRect();
+      if (r.top < 0 || r.bottom > box.getBoundingClientRect().top) el.scrollIntoView({ block: 'nearest' });
+    });
+  });
+  // a choice made in another tab of this browser (or in the app installed from it) applies here at once
   window.addEventListener('storage', e => {
     if (e.key !== CONSENT_KEY && e.key !== null) return;
+    const was = consentNow;
     consentNow = consentChoice();
-    if (consentNow === true) gaEnable();
-    else gaDisable();
-    consentBanner(consentNow === null);
+    consentApply(was);
+    if (consentNow === null) consentBanner(true);
+    else consentClose();
   });
   if (consentNow === true) gaEnable();
   else {
@@ -157,6 +195,6 @@ function consentOpen(from) {
   // privacy.html links here to change the choice
   if (location.hash === '#statistika') {
     history.replaceState(null, '', location.pathname + location.search);
-    consentOpen(null);
+    consentOpen(document.querySelector('.privacy-links [data-consent-open]'));
   }
 })();

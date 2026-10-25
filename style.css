@@ -858,7 +858,6 @@ button.dl-fr { margin-left: -.4rem; }
   transform: translateX(-50%);
   width: min(44rem, calc(100% - 24px));
   max-height: 70vh;
-  overflow-y: auto;
   z-index: 50;
   background: var(--surface);
   color: var(--fg);
@@ -866,15 +865,18 @@ button.dl-fr { margin-left: -.4rem; }
   border-radius: 14px;
   box-shadow: 0 10px 30px rgb(0 0 0 / .18);
   padding: 1rem 1.1rem;
-  display: grid;
-  gap: .5rem;
+  display: flex;
+  flex-direction: column;
+  gap: .6rem;
 }
+/* only the text scrolls on short screens: both answers always stay in view */
+.consent-text { display: grid; gap: .5rem; overflow-y: auto; min-height: 0; overscroll-behavior: contain; }
 .consent h2 { font-family: var(--f-display); font-size: 1.15rem; margin: 0; }
 .consent p { margin: 0; font-size: .92rem; }
 .consent a { color: var(--ink); }
 .consent-state { color: var(--muted); }
 .consent-state:empty { display: none; }
-.consent-actions { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+.consent-actions { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; flex: none; }
 /* both answers look exactly the same: no nudging */
 .consent-btn { background: var(--ink-soft); border-color: var(--ink); color: var(--ink); min-height: 48px; }
 .consent-note { color: var(--muted); font-size: .8rem !important; }
@@ -885,6 +887,7 @@ html { scroll-padding-bottom: var(--consent-h, 0px); }
 body { padding-bottom: var(--consent-h, 0px); }
 html.consent-open .dl-keys { position: static; }
 @media (max-width: 420px), (max-height: 600px) {
-  .consent { padding: .8rem .9rem; gap: .4rem; }
+  .consent { padding: .8rem .9rem; gap: .5rem; }
+  .consent-text { gap: .4rem; }
   .consent p { font-size: .86rem; }
 }
