@@ -40,6 +40,7 @@ let consentNow = consentChoice();
 window.dataLayer = window.dataLayer || [];
 function gtag() { window.dataLayer.push(arguments); }
 let gaLoaded = false;
+let gaBlocked = false;   // gtag.js did not load: an ad blocker or no internet
 
 function gaEnable() {
   if (!GA_ID) return;
@@ -64,6 +65,10 @@ function gaEnable() {
   const s = document.createElement('script');
   s.async = true;
   s.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(GA_ID);
+  s.onerror = () => {
+    gaBlocked = true;
+    if (!document.getElementById('consent').hidden) consentBanner(true);
+  };
   document.head.appendChild(s);
 }
 function gaDisable() {
@@ -119,7 +124,8 @@ function consentBanner(show) {
   if (show) {
     const id = consentNow === true ? gaClientId() : '';
     document.getElementById('consent-state').textContent = consentNow === true
-      ? 'Сега статистиката е включена.' + (id ? ' Номерът ти в статистиката: ' + id + '.' : '')
+      ? (gaBlocked ? 'Сега статистиката е включена, но Google Analytics не се зарежда в този браузър (например заради блокер на реклами или без интернет), затова нищо не се изпраща.'
+        : 'Сега статистиката е включена.' + (id ? ' Номерът ти в статистиката: ' + id + '.' : ''))
       : consentNow === false ? 'Сега статистиката е изключена.' : '';
     box.querySelector('.consent-text').scrollTop = 0;   // the state line first
   }
