@@ -71,7 +71,7 @@ function dlList() {
     b.type = 'button';
     const title = el('span', 'choice-title', d.title);
     title.lang = 'fr';
-    const meta = [d.titleBg, d.tenses.map(t => TENSE[t].label).join(', ')];
+    const meta = [d.titleBg, tensesLabel(new Set(d.tenses))];
     if (done.fill) meta.push('попълнено ' + done.fill);
     if (done.role) meta.push('роля ✓');
     b.append(title, el('span', 'choice-desc', meta.join(' · ')));
