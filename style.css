@@ -878,3 +878,13 @@ button.dl-fr { margin-left: -.4rem; }
 /* both answers look exactly the same: no nudging */
 .consent-btn { background: var(--ink-soft); border-color: var(--ink); color: var(--ink); min-height: 48px; }
 .consent-note { color: var(--muted); font-size: .8rem !important; }
+.privacy-links { display: flex; flex-wrap: wrap; gap: 0 1rem; margin-top: .1rem; }
+.privacy-links a, .privacy-links .linkbtn { color: var(--muted); min-height: 32px; display: inline-flex; align-items: center; font-size: inherit; }
+/* room under the open consent banner, so nothing hides behind it */
+html { scroll-padding-bottom: var(--consent-h, 0px); }
+body { padding-bottom: var(--consent-h, 0px); }
+html.consent-open .dl-keys { position: static; }
+@media (max-width: 420px), (max-height: 600px) {
+  .consent { padding: .8rem .9rem; gap: .4rem; }
+  .consent p { font-size: .86rem; }
+}

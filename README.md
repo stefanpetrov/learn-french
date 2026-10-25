@@ -18,3 +18,17 @@
 - `analytics.js` — статистика с Google Analytics 4 само след съгласие (сложи ID-то в `GA_ID`)
 - `privacy.html` — страницата „Поверителност“
 - `sw.js` — офлайн режим (при нови файлове смени `VERSION`)
+
+## Статистика (Google Analytics 4)
+
+Изключена е, докато `GA_ID` в `analytics.js` е празно: тогава няма банер и нищо не се зарежда от Google.
+Посетителят вижда банер „Приемам / Отказвам“. Google се зарежда само след „Приемам“ (Consent Mode „basic“).
+
+Преди да сложиш ID-то, в Google Analytics (на тези настройки разчита `privacy.html`):
+1. Admin → Account settings → Data sharing settings: махни всички отметки.
+2. Admin → Data streams → уеб потока → Enhanced measurement: изключено.
+3. Admin → Data collection: Google signals изключено.
+4. Admin → Data retention: event и user data 2 месеца, „Reset user data on new activity“ изключено.
+5. По желание: Admin → Data collection → Granular location and device data collection изключено. Тогава в `privacy.html` смени „държава, регион и град“ на „държава и регион“.
+
+Ако промениш текста на банера, целите или тези настройки, смени `CONSENT_KEY` (`statistika-v2` …), за да бъдат попитани всички отново, и обнови `privacy.html`.

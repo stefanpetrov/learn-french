@@ -16,12 +16,24 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<section class="consent" id="consent" role="region" aria-labelledby="consent-title" hidden>
+  <h2 id="consent-title">Статистика за посещенията</h2>
+  <p>Искам да виждам колко хора използват приложението и кои упражнения са полезни. Ако приемеш, Google Analytics ще запише бисквитки на устройството ти и ще изпраща на Google данни за посещението: кои раздели отваряш, какво завършваш, вид устройство и браузър, приблизително местоположение. Ако откажеш, приложението работи по същия начин. Напредъкът ти остава само на това устройство. <a href="privacy.html#statistika">Подробности</a></p>
+  <p class="consent-note">Ако си под 14 години, приеми само ако родител ти е разрешил.</p>
+  <p class="consent-state" id="consent-state"></p>
+  <div class="consent-actions">
+    <button type="button" class="btn consent-btn" id="consent-no">Отказвам</button>
+    <button type="button" class="btn consent-btn" id="consent-yes">Приемам</button>
+  </div>
+  <p class="consent-note">Можеш да промениш избора си по всяко време от „Настройки за статистика“ горе или най-долу.</p>
+</section>
 <div class="wrap">
   <header class="cahier">
     <p class="eyebrow">Thème 2 · Les loisirs</p>
     <h1>Verbes des loisirs</h1>
     <p class="lede">Глаголите от урока в три времена. Чукни дума или форма, за да я чуеш. Частта, която се променя, е в <span class="end">червено</span>.</p>
     <p class="meta" id="meta"></p>
+    <p class="meta privacy-links"><a href="privacy.html">Поверителност</a><button type="button" class="linkbtn" data-consent-open hidden>Настройки за статистика</button></p>
   </header>
 
   <div class="hint" id="hint" hidden></div>
@@ -186,7 +198,7 @@
     <div id="speak"></div>
 
     <p class="tip">
-      Чуй примера, натисни „Кажи“ и го повтори на глас. Телефонът показва кои думи е разбрал. Разпознаването работи в Chrome и Safari, има нужда от интернет и иска микрофона: първия път избери „Разреши“. При „Кажи“ гласът се изпраща за разпознаване (на Google или Apple). С „Запиши се“ чуваш собствения си глас до примера. Този запис остава само на телефона.
+      Чуй примера, натисни „Кажи“ и го повтори на глас. Телефонът показва кои думи е разбрал. Разпознаването работи в Chrome, Edge и Safari, има нужда от интернет и иска микрофона: първия път избери „Разреши“. При „Кажи“ гласът се изпраща за разпознаване (на Google, Microsoft или Apple, според браузъра). С „Запиши се“ чуваш собствения си глас до примера. Този запис остава само на телефона.
     </p>
   </div>
 
@@ -224,19 +236,10 @@
 
 <footer class="site-footer" id="site-footer">
   <a href="privacy.html">Поверителност</a>
-  <button type="button" class="linkbtn" id="consent-open" hidden>Настройки за статистика</button>
+  <button type="button" class="linkbtn" id="consent-open" data-consent-open hidden>Настройки за статистика</button>
 </footer>
 
-<section class="consent" id="consent" role="region" aria-labelledby="consent-title" hidden>
-  <h2 id="consent-title">Статистика за посещенията</h2>
-  <p>Ще ми помогнеш ли да видя как се използва приложението? Ако приемеш, Google Analytics ще запише бисквитки и ще изпраща на Google данни за посещението: кои раздели отваряш, какво завършваш, вид устройство и приблизително местоположение. Напредъкът ти остава само на това устройство. <a href="privacy.html#statistika">Подробности</a></p>
-  <p class="consent-state" id="consent-state"></p>
-  <div class="consent-actions">
-    <button type="button" class="btn consent-btn" id="consent-no">Отказвам</button>
-    <button type="button" class="btn consent-btn" id="consent-yes">Приемам</button>
-  </div>
-  <p class="consent-note">Можеш да промениш избора си по всяко време от „Настройки за статистика“ най-долу.</p>
-</section>
+
 
 <script src="analytics.js"></script>
 <script src="data.js"></script>
