@@ -1,17 +1,24 @@
 /* Short dialogues: listen (two voices, translation), fill in the verbs, or play a role.
    Data: DIALOGUES from dialogues-data.js. Gaps in the French are written {answer|infinitive|tense}.
-   Uses helpers from app.js, dictation.js and speaking.js. */
+   Uses helpers from app.js, dictation.js, speaking.js and pairs.js. */
 
 const DL_GAP = /\{([^|{}]+)\|([^|{}]+)\|(pr|pc|fp)\}/g;
 const DL_SLOW = 0.6;
 const DL_NORMAL = 0.92;
 const DL_MODES = [['listen', 'Слушай'], ['fill', 'Попълни'], ['role', 'Роля']];
 
+// French spacing: ? ! : ; stay on the line of the word before them
+DIALOGUES.forEach(d => {
+  d.title = d.title.replace(/ ([?!:;])/g, ' $1');
+  d.lines.forEach(l => { l.fr = l.fr.replace(/ ([?!:;])/g, ' $1'); });
+});
+
 let dlProgress = load('dialozi', {});
 if (!dlProgress || typeof dlProgress !== 'object' || Array.isArray(dlProgress)) dlProgress = {};
 const dl = {
   cur: null, mode: 'listen', showBg: load('dialozi-bg', 1) !== 0, slow: false,
-  playing: false, role: null, step: 0, rec: null, ui: null, lastInput: null
+  playing: false, playId: 0, gen: 0, sayId: 0, roles: {}, step: 0, rec: null, ui: null,
+  lastInput: null, rolePaused: false
 };
 const dlRoot = $('dialogues');
 
@@ -32,8 +39,11 @@ const dlSpeaker = (d, who) => who === 'A' ? d.a : d.b;
 
 /* ---------- voices: two speakers, two voices if the phone has them ---------- */
 function dlVoices() {
-  const fr = synth ? synth.getVoices().filter(v => /^fr/i.test(v.lang)) : [];
-  return fr;
+  if (!synth) return [];
+  const fr = synth.getVoices().filter(v => /^fr/i.test(v.lang));
+  // the app's own voice first, then other voices from France, then the rest
+  const rank = v => (v === voice ? 0 : /^fr[-_]FR/i.test(v.lang) ? 1 : 2);
+  return fr.sort((x, y) => rank(x) - rank(y));
 }
 function dlUtterance(d, line, target) {
   const sp = dlSpeaker(d, line.who);
@@ -43,25 +53,56 @@ function dlUtterance(d, line, target) {
   u.pitch = sp.gender === 'f' ? 1.15 : 0.85;
   return u;
 }
-function dlStop() {
-  stopAll();
+function dlAbortRec() {
+  if (!dl.rec) return;
+  const r = dl.rec;
+  r.cancelled = true;
+  dl.rec = null;
+  try { r.abort(); } catch (e) {}
+}
+/* forget pending lines and close the mic, but leave speech alone (another tab may have just started its own) */
+function dlRelease() {
   dl.playing = false;
-  if (dl.rec) { const r = dl.rec; r.cancelled = true; dl.rec = null; try { r.abort(); } catch (e) {} }
+  dl.playId++;
+  dl.sayId++;
+  dlAbortRec();
   if (dl.ui && dl.ui.playAll) dl.ui.playAll.querySelector('.lbl').textContent = 'Пусни целия диалог';
 }
+function dlStop() {
+  stopAll();
+  dlRelease();
+}
+/* Say one line. onend runs only when this line finished by itself (not when it was cut off),
+   with a time limit in case the phone never reports the end. */
 function dlSay(d, line, target, onend) {
+  dlAbortRec();                       // nothing plays into an open mic
+  const id = ++dl.sayId;
   if (!synth) { if (onend) onend(); return; }
   stopAll();
   const u = dlUtterance(d, line, target);
-  if (onend) { const prev = u.onend; u.onend = u.onerror = () => { prev(); onend(); }; }
+  if (onend) {
+    let done = false;
+    const text = dlText(line.fr);
+    const fire = () => { if (done) return; done = true; clearTimeout(limit); if (id === dl.sayId) onend(); };
+    const limit = setTimeout(fire, 2500 + text.length * (dl.slow ? 160 : 100));
+    const prevEnd = u.onend;
+    u.onend = () => { prevEnd(); fire(); };
+    u.onerror = e => {
+      prevEnd();
+      if (e && (e.error === 'interrupted' || e.error === 'canceled')) { done = true; clearTimeout(limit); }
+      else fire();
+    };
+  }
   synth.speak(u);
 }
 
 /* ---------- list ---------- */
 function dlList() {
   dlStop();
+  dl.gen++;
   dl.cur = null;
   dl.ui = null;
+  dl.rolePaused = false;
   const wrap = el('div', 'dl-listbox');
   wrap.appendChild(el('p', 'set-note', 'Кратки разговори за свободното време. Избери един.'));
   const ul = el('div', 'choices');
@@ -72,7 +113,7 @@ function dlList() {
     const title = el('span', 'choice-title', d.title);
     title.lang = 'fr';
     const meta = [d.titleBg, tensesLabel(new Set(d.tenses))];
-    if (done.fill) meta.push('попълнено ' + done.fill);
+    if (done.fill) meta.push('верни ' + done.fill);
     if (done.role) meta.push('роля ✓');
     b.append(title, el('span', 'choice-desc', meta.join(' · ')));
     b.addEventListener('click', () => dlOpen(d));
@@ -85,8 +126,11 @@ function dlList() {
 /* ---------- one dialogue ---------- */
 function dlOpen(d, mode) {
   dlStop();
+  dl.gen++;                            // anything still pending from an earlier run is ignored
   dl.cur = d;
   dl.mode = mode || dl.mode;
+  dl.lastInput = null;
+  dl.rolePaused = false;
   const box = el('div', 'qcard dl-box');
 
   const head = el('div', 'dl-head');
@@ -99,7 +143,7 @@ function dlOpen(d, mode) {
   box.appendChild(head);
 
   const modes = el('div', 'seg');
-  DL_MODES.forEach(([id, label]) => modes.appendChild(toggleBtn(label, dl.mode === id, () => dlOpen(d, id))));
+  DL_MODES.forEach(([id, label]) => modes.appendChild(toggleBtn(label, dl.mode === id, () => { if (dl.mode !== id) dlOpen(d, id); })));
   box.appendChild(modes);
 
   const body = el('div', 'dl-body');
@@ -126,7 +170,7 @@ function dlSayButton(d, line) {
   btn.innerHTML = ICON;
   btn.appendChild(el('span', null, dlText(line.fr)));
   btn.setAttribute('aria-label', 'Произнеси: ' + dlText(line.fr));
-  btn.addEventListener('click', () => { dl.playing = false; dlSay(d, line, btn); });
+  btn.addEventListener('click', () => { if (dl.playing) dlStop(); dlSay(d, line, btn); });
   return btn;
 }
 
@@ -175,12 +219,14 @@ function dlPlayAll(d) {
   if (dl.playing) { dlStop(); return; }
   dlStop();
   dl.playing = true;
+  const id = dl.playId;
   dl.ui.playAll.querySelector('.lbl').textContent = 'Спри';
   const run = k => {
-    if (!dl.playing || dl.cur !== d || !dl.ui || !dl.ui.buttons) return;
+    if (!dl.playing || id !== dl.playId || dl.cur !== d || !dl.ui || !dl.ui.buttons) return;
     if (k >= d.lines.length) { dlStop(); return; }
-    dlSay(d, d.lines[k], dl.ui.buttons[k], () => { if (dl.playing) setTimeout(() => run(k + 1), 250); });
-    dl.playing = true;
+    dlSay(d, d.lines[k], dl.ui.buttons[k], () => {
+      if (dl.playing && id === dl.playId) setTimeout(() => run(k + 1), 250);
+    });
   };
   run(0);
 }
@@ -190,6 +236,8 @@ function dlFill(d, body) {
   body.appendChild(dlControls(body, d, false));
   const lines = el('div', 'dl-lines');
   const gaps = [];
+  const multi = d.tenses.length > 1;
+  let checked = false;
   d.lines.forEach(line => {
     const c = el('div');
     const p = el('p', 'dl-fr dl-fill');
@@ -203,16 +251,21 @@ function dlFill(d, body) {
       input.setAttribute('autocorrect', 'off');
       input.setAttribute('spellcheck', 'false');
       input.setAttribute('lang', 'fr');
-      input.size = Math.max(5, part.answer.length + 1);
-      input.placeholder = part.inf;
+      input.setAttribute('enterkeyhint', 'next');
+      // the infinitive, and the tense when the dialogue mixes tenses
+      input.placeholder = multi ? part.inf + ' · ' + TENSE_SHORT[part.tense] : part.inf;
+      input.size = Math.max(5, part.answer.length + 1, input.placeholder.length);
       input.setAttribute('aria-label', 'Глаголът ' + part.inf + ' в ' + TENSE[part.tense].label);
       input.addEventListener('focus', () => { dl.lastInput = input; });
       input.addEventListener('keydown', e => {
         if (e.key !== 'Enter') return;
         e.preventDefault();
+        if (checked) return;
+        // the next empty field (wrapping round); check when all are filled
         const k = gaps.findIndex(g => g.input === input);
-        const nextGap = gaps.slice(k + 1).find(g => !g.input.readOnly);
-        if (nextGap) nextGap.input.focus();
+        const order = gaps.slice(k + 1).concat(gaps.slice(0, k + 1));
+        const empty = order.find(g => !g.input.value.trim());
+        if (empty) empty.input.focus();
         else check.click();
       });
       p.appendChild(input);
@@ -230,14 +283,18 @@ function dlFill(d, body) {
   });
   body.appendChild(lines);
 
-  const keys = el('div', 'keys');
+  const keys = el('div', 'keys dl-keys');
   keys.setAttribute('aria-label', 'Букви със знаци');
   DK_KEYS.forEach(k => {
     const b = el('button', null, k);
     b.type = 'button';
     b.setAttribute('aria-label', 'Въведи ' + k);
     b.addEventListener('pointerdown', e => e.preventDefault());
-    b.addEventListener('click', () => { if (dl.lastInput) insertChar(dl.lastInput, k); });
+    b.addEventListener('click', () => {
+      let target = dl.lastInput && dl.lastInput.isConnected && !dl.lastInput.readOnly ? dl.lastInput : null;
+      if (!target) { const g = gaps.find(x => !x.input.readOnly && !x.input.value.trim()); target = g ? g.input : null; }
+      if (target) insertChar(target, k);
+    });
     keys.appendChild(b);
   });
   body.appendChild(keys);
@@ -253,7 +310,9 @@ function dlFill(d, body) {
   const check = el('button', 'btn primary', 'Провери');
   check.type = 'button';
   check.addEventListener('click', () => {
-    let ok = 0;
+    if (checked) return;
+    checked = true;
+    let ok = 0, nearCount = 0;
     gaps.forEach(g => {
       const val = g.input.value;
       const cands = variants(g.part.answer);
@@ -262,62 +321,59 @@ function dlFill(d, body) {
       g.input.classList.remove('ok', 'near', 'bad');
       g.input.classList.add(exact ? 'ok' : near ? 'near' : 'bad');
       if (exact || near) ok++;
+      if (near) nearCount++;
       if (!exact) {
-        g.input.title = g.part.answer;
-        if (!near) {
-          // show the right form next to the field
-          let hint = g.input.nextSibling;
-          if (!(hint && hint.classList && hint.classList.contains('dl-right'))) {
-            hint = el('span', 'dl-right');
-            g.input.after(hint);
-          }
-          hint.textContent = ' ' + g.part.answer;
-        }
+        // the right spelling next to the field (yellow when only an accent was missing)
+        const hint = el('span', 'dl-right' + (near ? ' dl-right-near' : ''), ' ' + g.part.answer);
+        g.input.after(hint);
       }
       g.input.readOnly = true;
     });
+    keys.hidden = true;
     const n = gaps.length;
-    fb.replaceChildren(el('p', 'verdict ' + (ok === n ? 'ok' : ok >= n * 0.6 ? 'near' : 'bad'),
-      ok === n ? 'Браво! Всички глаголи са верни.' : 'Верни: ' + ok + ' от ' + n + '. Правилните форми са до полетата.'));
-    if (gaps.some(g => g.input.classList.contains('near'))) fb.appendChild(el('p', 'fb-line', 'Жълтите се зачитат, но внимавай за знаците над буквите.'));
+    const msg = ok === n && !nearCount ? 'Браво! Всички глаголи са верни.'
+      : ok === n ? 'Всички се зачитат. Виж правилното изписване до жълтите полета.'
+      : 'Верни: ' + ok + ' от ' + n + '. Правилните форми са до полетата.';
+    fb.replaceChildren(el('p', 'verdict ' + (ok === n ? (nearCount ? 'near' : 'ok') : ok >= n * 0.6 ? 'near' : 'bad'), msg));
     fb.hidden = false;
     check.hidden = true;
     const prev = dlProgress[d.id] || {};
-    const best = prev.fillOk || 0;
-    if (ok >= best) dlProgress[d.id] = { ...prev, fillOk: ok, fill: ok + '/' + n };
+    if (ok >= (prev.fillOk || 0)) dlProgress[d.id] = { ...prev, fillOk: ok, fill: ok + '/' + n };
     save('dialozi', dlProgress);
     reset.focus({ preventScroll: true });
     fb.scrollIntoView({ block: 'nearest' });
   });
   actions.append(reset, check);
   body.appendChild(actions);
-  body.appendChild(el('p', 'set-note', 'Напиши глагола във времето, което се търси (под полето е инфинитивът). В passé composé пиши и спомагателния глагол (avons joué), а във futur proche и aller (vais voir).'));
+  body.appendChild(el('p', 'set-note', (multi ? 'В полето са инфинитивът и времето. ' : 'В полето е инфинитивът; всички глаголи са в ' + TENSE[d.tenses[0]].label + '. ')
+    + 'В passé composé пиши и спомагателния глагол (avons joué), а във futur proche и aller (vais voir).'));
 }
 
 /* role play: the app says the other person's lines, you say yours */
 function dlRole(d, body) {
-  if (!dl.role) {
+  const me = dl.roles[d.id];
+  if (!me) {
     body.appendChild(el('p', 'set-note', 'Избери кой си. Приложението казва репликите на другия, а ти казваш своите на глас.'));
     const ch = el('div', 'actions dl-roles');
     ['A', 'B'].forEach(who => {
       const sp = dlSpeaker(d, who);
       const b = el('button', 'btn' + (who === 'A' ? ' primary' : ''), 'Аз съм ' + sp.name);
       b.type = 'button';
-      b.addEventListener('click', () => { dl.role = who; dl.step = 0; dlOpen(d, 'role'); });
+      b.addEventListener('click', () => { dl.roles[d.id] = who; dlOpen(d, 'role'); });
       ch.appendChild(b);
     });
     body.appendChild(ch);
     return;
   }
-  const me = dl.role;
   const top = el('div', 'dl-controls');
   const slow = toggleBtn('Бавно', dl.slow, () => { dl.slow = !dl.slow; slow.setAttribute('aria-pressed', String(dl.slow)); });
   const switchRole = el('button', 'linkbtn', 'Смени ролята');
   switchRole.type = 'button';
-  switchRole.addEventListener('click', () => { dl.role = me === 'A' ? 'B' : 'A'; dl.step = 0; dlOpen(d, 'role'); });
+  switchRole.addEventListener('click', () => { dl.roles[d.id] = me === 'A' ? 'B' : 'A'; dlOpen(d, 'role'); });
   top.append(slow, switchRole);
   body.appendChild(top);
   const lines = el('div', 'dl-lines');
+  lines.tabIndex = -1;
   body.appendChild(lines);
   dl.ui.lines = lines;
   dl.step = 0;
@@ -326,15 +382,17 @@ function dlRole(d, body) {
 function dlRoleStep(d) {
   if (!dl.ui || dl.cur !== d || !dl.ui.lines) return;
   const lines = dl.ui.lines;
+  const me = dl.roles[d.id];
+  const gen = dl.gen;
   if (dl.step >= d.lines.length) {
     const done = el('div', 'feedback');
     done.append(el('p', 'verdict ok', 'Браво! Изигра целия диалог.'));
     const again = el('button', 'btn primary', 'Пак');
     again.type = 'button';
-    again.addEventListener('click', () => { dl.step = 0; dlOpen(d, 'role'); });
+    again.addEventListener('click', () => dlOpen(d, 'role'));
     const other = el('button', 'btn', 'Другата роля');
     other.type = 'button';
-    other.addEventListener('click', () => { dl.role = dl.role === 'A' ? 'B' : 'A'; dl.step = 0; dlOpen(d, 'role'); });
+    other.addEventListener('click', () => { dl.roles[d.id] = me === 'A' ? 'B' : 'A'; dlOpen(d, 'role'); });
     const act = el('div', 'actions');
     act.append(other, again);
     done.appendChild(act);
@@ -346,17 +404,25 @@ function dlRoleStep(d) {
     return;
   }
   const line = d.lines[dl.step];
-  if (line.who !== dl.role) {
-    // the other person speaks, then it is your turn
+  const stepNow = dl.step;
+  const advance = () => {
+    if (gen !== dl.gen || dl.cur !== d || dl.step !== stepNow || currentView !== 'dialogues') return;
+    dl.step++;
+    dlRoleStep(d);
+  };
+  if (line.who !== me) {
+    // the other person speaks, then it is your turn; "Напред" if you do not want to wait
     const c = el('div');
     const fr = dlSayButton(d, line);
-    c.append(fr, el('p', 'dl-bg', line.bg));
+    const skip = el('button', 'linkbtn dl-skip', 'Напред ›');
+    skip.type = 'button';
+    skip.addEventListener('click', () => { skip.remove(); dlStop(); advance(); });
+    c.append(fr, el('p', 'dl-bg', line.bg), skip);
     lines.appendChild(dlBubble(d, line, c));
     fr.scrollIntoView({ block: 'nearest' });
-    const stepNow = dl.step;
-    const go = () => { if (dl.cur === d && dl.step === stepNow && currentView === 'dialogues') { dl.step++; dlRoleStep(d); } };
-    if (synth) dlSay(d, line, fr, () => setTimeout(go, 300));
-    else go();
+    const finish = () => { if (gen === dl.gen && dl.step === stepNow) { skip.remove(); setTimeout(advance, 300); } };
+    if (synth) dlSay(d, line, fr, finish);
+    else finish();
     return;
   }
   // your line: the Bulgarian first, the French after you say it
@@ -386,10 +452,12 @@ function dlRoleStep(d) {
   lines.appendChild(dlBubble(d, line, c));
   c.scrollIntoView({ block: 'nearest' });
   const reveal = () => {
+    const hadFocus = document.activeElement === show;
     hidden.hidden = false;
     next.hidden = false;
     show.hidden = true;
     next.classList.add('primary');
+    if (hadFocus) next.focus({ preventScroll: true });
     dlSay(d, line, fr);
   };
   show.addEventListener('click', reveal);
@@ -397,6 +465,7 @@ function dlRoleStep(d) {
     dlStop();
     act.remove();
     hidden.hidden = false;
+    lines.focus({ preventScroll: true });
     dl.step++;
     dlRoleStep(d);
   });
@@ -412,6 +481,8 @@ function dlRoleListen(d, line, ui) {
   rec.interimResults = true;
   rec.maxAlternatives = 1;
   let finalText = '', interimText = '', error = null;
+  ui.heard.hidden = true;
+  ui.res.hidden = true;
   const timer = setTimeout(() => { try { rec.stop(); } catch (e) {} }, SP_LISTEN_MS);
   rec.onresult = e => {
     if (rec.cancelled) return;
@@ -429,21 +500,24 @@ function dlRoleListen(d, line, ui) {
     ui.mic.classList.remove('listening');
     ui.mic.querySelector('.lbl').textContent = 'Кажи';
     if (rec.cancelled || dl.cur !== d) return;
-    const text = finalText || interimText;
+    const text = finalText || (error ? '' : interimText);
     if (!text) {
+      ui.heard.hidden = true;
       ui.res.replaceChildren(document.createTextNode(SP_ERRORS[error && error !== 'aborted' ? error : 'no-speech'] || SP_ERRORS.other));
       ui.res.className = 'verdict bad';
       ui.res.hidden = false;
       return;
     }
     const r = spMatch(dlText(line.fr), text);
+    const g = spGrade(r);
     ui.res.className = 'dk-answer sp-words';
     ui.res.replaceChildren();
     r.exp.forEach((t, k) => {
       if (k) ui.res.append(' ');
       ui.res.appendChild(el('span', t.st === 'bad' ? 'dk-bad' : null, t.show));
     });
-    ui.res.prepend(el('span', 'verdict ' + (r.ok === r.total ? 'ok' : 'near'), r.ok === r.total ? 'Чудесно! ' : 'Почти: '));
+    const v = SP_VERDICTS[g.level];
+    ui.res.prepend(el('span', 'verdict ' + v[0], v[1] + ' '));
     ui.res.hidden = false;
     ui.reveal();
   };
@@ -453,16 +527,21 @@ function dlRoleListen(d, line, ui) {
   try { rec.start(); } catch (e) { dl.rec = null; ui.mic.classList.remove('listening'); ui.mic.querySelector('.lbl').textContent = 'Кажи'; }
 }
 
-/* leaving the tab or the app stops speech and the mic */
+/* leaving the tab or the app stops speech and the mic; an unfinished role play starts again */
+function dlPauseRole() {
+  if (dl.cur && dl.mode === 'role' && dl.roles[dl.cur.id] && dl.step < dl.cur.lines.length) dl.rolePaused = true;
+}
+// showView has already stopped speech; the new tab may be starting its own, so only release
 VIEWS.filter(v => v !== 'dialogues').forEach(v => $('tab-' + v).addEventListener('click', () => {
-  dl.playing = false;
-  if (dl.rec) { const r = dl.rec; r.cancelled = true; dl.rec = null; try { r.abort(); } catch (e) {} }
-  if (dl.cur && dl.mode === 'role' && dl.role) dl.rolePaused = true;
+  dlPauseRole();
+  dlRelease();
 }));
-// a role play that was left in the middle starts again from the top
 $('tab-dialogues').addEventListener('click', () => {
-  if (dl.rolePaused && dl.cur) { dl.rolePaused = false; dlOpen(dl.cur, 'role'); }
+  if (dl.rolePaused && dl.cur) dlOpen(dl.cur, 'role');
 });
-document.addEventListener('visibilitychange', () => { if (document.hidden) dlStop(); });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { dlPauseRole(); dlStop(); }
+  else if (currentView === 'dialogues' && dl.rolePaused && dl.cur) dlOpen(dl.cur, 'role');
+});
 
 dlList();

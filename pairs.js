@@ -6,6 +6,7 @@ const PR_MODES = [['match', 'Свързване'], ['memory', 'Памет']];
 const PR_KINDS = [['tr', 'Превод'], ['cj', 'Спрежение']];
 const PR_SIZES = [6, 8];
 const PR_FLIP_BACK_MS = 900;
+const TENSE_SHORT = { pr: 'présent', pc: 'p. composé', fp: 'f. proche' };
 
 const savedPr = load('dvoiki-set', {}) || {};
 const pr = {
@@ -14,8 +15,8 @@ const pr = {
   size: PR_SIZES.includes(savedPr.size) ? savedPr.size : 6,
   tenses: validSet(savedPr.tenses, TENSE_IDS, ['pr']),
   groups: validSet(savedPr.groups, GROUP_IDS, GROUP_IDS),
-  pairs: [], tiles: [], sel: null, open: [], found: 0, mistakes: 0,
-  start: 0, timer: null, busy: false, done: false
+  pairs: [], tiles: [], sel: null, open: [], seen: new Set(), found: 0, mistakes: 0,
+  start: 0, pausedAt: 0, elapsed: 0, timer: null, endTimer: null, flipTimer: null, busy: false, done: false
 };
 let prBest = load('dvoiki-best', {});
 if (!prBest || typeof prBest !== 'object' || Array.isArray(prBest)) prBest = {};
@@ -24,7 +25,9 @@ const prRoot = $('pairs');
 function savePrSettings() {
   save('dvoiki-set', { mode: pr.mode, kind: pr.kind, size: pr.size, tenses: [...pr.tenses], groups: [...pr.groups] });
 }
-const prBestKey = () => [pr.mode, pr.kind, pr.size].join(':');
+// the record belongs to the game actually played (fewer pairs when the groups are small)
+const prBestKey = () => [pr.mode, pr.kind, pr.pairs.length].join(':');
+const prOldBest = key => (Number.isFinite(prBest[key]) && prBest[key] > 0 ? prBest[key] : 0);
 
 /* ---------- pairs ---------- */
 /* Each pair is { fr, bg, say }: fr is the French side, bg the other side,
@@ -50,26 +53,38 @@ function prBuild() {
     const usedInf = new Set();
     const tryAdd = ([inf, p, t]) => {
       const f = forms(inf, t)[p];
-      const tag = pr.tenses.size > 1 ? ' · ' + TENSE_SHORT[t] : '';
-      add({ fr: SUBJ[p] + ' · ' + inf + tag, bg: formAnswer(f), say: formText(f), inf });
+      add({ fr: SUBJ[p] + ' · ' + inf, tag: pr.tenses.size > 1 ? TENSE_SHORT[t] : '', bg: formAnswer(f), say: formText(f), inf });
     };
     // one form per verb first, then fill
-    items.forEach(it => { if (!usedInf.has(it[0]) && pairs.length < pr.size) { const n = pairs.length; tryAdd(it); if (pairs.length > n) usedInf.add(it[0]); } });
+    items.forEach(it => {
+      if (usedInf.has(it[0]) || pairs.length >= pr.size) return;
+      const n = pairs.length;
+      tryAdd(it);
+      if (pairs.length > n) usedInf.add(it[0]);
+    });
     items.forEach(it => tryAdd(it));
   }
   return pairs;
 }
-const TENSE_SHORT = { pr: 'présent', pc: 'p. composé', fp: 'f. proche' };
+/* how many pairs the settings can give (Превод runs short with one small group) */
+function prAvailable() {
+  if (pr.kind !== 'tr') return pr.size;
+  const meanings = new Set(Object.keys(VERB).filter(inf => pr.groups.has(VERB[inf].g)).map(inf => baseMeaning(VERB[inf].bg)));
+  return Math.min(pr.size, meanings.size);
+}
 
 /* ---------- settings ---------- */
+function prChoice(items, cur, set) {
+  return items.map(([id, label]) => toggleBtn(label, cur === id, () => { if (cur !== id) { set(id); prSettingsChanged(); } }));
+}
 function renderPrSettings() {
-  $('p-mode').replaceChildren(...PR_MODES.map(([id, label]) => toggleBtn(label, pr.mode === id, () => { pr.mode = id; prSettingsChanged(); })));
-  $('p-kind').replaceChildren(...PR_KINDS.map(([id, label]) => toggleBtn(label, pr.kind === id, () => { pr.kind = id; prSettingsChanged(); })));
+  $('p-mode').replaceChildren(...prChoice(PR_MODES, pr.mode, v => { pr.mode = v; }));
+  $('p-kind').replaceChildren(...prChoice(PR_KINDS, pr.kind, v => { pr.kind = v; }));
   $('p-tenses').replaceChildren(...setToggles(TENSE_ITEMS, pr.tenses, prSettingsChanged));
   $('p-tense-field').hidden = pr.kind !== 'cj';
   $('p-groups').replaceChildren(...setToggles(GROUP_ITEMS, pr.groups, prSettingsChanged));
-  $('p-size').replaceChildren(...PR_SIZES.map(n => toggleBtn(String(n), pr.size === n, () => { pr.size = n; prSettingsChanged(); })));
-  const parts = [PR_MODES.find(m => m[0] === pr.mode)[1], PR_KINDS.find(k => k[0] === pr.kind)[1], pr.size + ' двойки'];
+  $('p-size').replaceChildren(...prChoice(PR_SIZES.map(n => [n, String(n)]), pr.size, v => { pr.size = v; }));
+  const parts = [PR_MODES.find(m => m[0] === pr.mode)[1], PR_KINDS.find(k => k[0] === pr.kind)[1], prAvailable() + ' двойки'];
   if (pr.kind === 'cj') parts.push(tensesLabel(pr.tenses));
   const gl = groupsLabel(pr.groups);
   if (gl) parts.push(gl);
@@ -81,26 +96,50 @@ function prSettingsChanged() {
   prStart(null);
 }
 
-/* ---------- game ---------- */
-function prClock() {
-  const s = Math.floor((performance.now() - pr.start) / 1000);
-  return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
-}
+/* ---------- time ---------- */
+const prNow = () => (pr.start ? (performance.now() - pr.start) / 1000 : 0);
+const prClock = secs => { const s = Math.floor(secs); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+// tenths, so a new record never looks the same as the old one
+const prFmt = secs => prClock(secs) + ',' + Math.floor((secs * 10) % 10);
 function prStopTimer() {
   if (pr.timer) { clearInterval(pr.timer); pr.timer = null; }
 }
+function prTick() {
+  if (pr.ui) pr.ui.clock.textContent = prClock(prNow());
+}
+function prBegin() {
+  if (pr.start) return;
+  pr.start = performance.now();
+  pr.timer = setInterval(prTick, 500);
+}
+function prPause() {
+  if (pr.start && !pr.done && !pr.pausedAt) { prStopTimer(); pr.pausedAt = performance.now(); }
+}
+function prResume() {
+  if (pr.pausedAt && !pr.done) {
+    pr.start += performance.now() - pr.pausedAt;
+    pr.pausedAt = 0;
+    pr.timer = setInterval(prTick, 500);
+  }
+}
+
+/* ---------- game ---------- */
 function prStart(pairs) {
   prStopTimer();
+  clearTimeout(pr.endTimer);
+  clearTimeout(pr.flipTimer);
   stopAll();
   pr.pairs = pairs || prBuild();
   pr.sel = null;
   pr.open = [];
+  pr.seen = new Set();
   pr.found = 0;
   pr.mistakes = 0;
   pr.busy = false;
   pr.done = false;
   pr.start = 0;
   pr.pausedAt = 0;
+  pr.elapsed = 0;
   prRender();
 }
 
@@ -109,17 +148,21 @@ function prTile(pairIdx, side) {
   const b = el('button', 'pr-tile ' + (side === 'fr' ? 'pr-fr' : 'pr-bg'));
   b.type = 'button';
   const text = side === 'fr' ? p.fr : p.bg;
-  if (side === 'fr' || pr.kind === 'cj') b.lang = 'fr';
+  const face = el('span', 'pr-face', text);
+  if (side === 'fr' || pr.kind === 'cj') face.lang = 'fr';
+  if (side === 'fr' && p.tag) face.append(el('small', 'pr-tag', p.tag));
   b.dataset.pair = String(pairIdx);
   b.dataset.side = side;
+  const label = text + (side === 'fr' && p.tag ? ', ' + p.tag : '');
   if (pr.mode === 'memory') {
-    b.append(el('span', 'pr-back', '?'), el('span', 'pr-face', text));
+    b.append(el('span', 'pr-back', '?'), face);
     b.setAttribute('aria-label', 'Скрита плочка');
   } else {
-    b.append(el('span', 'pr-face', text));
+    b.append(face);
+    b.setAttribute('aria-pressed', 'false');
   }
   b.addEventListener('click', () => prTap(b));
-  return { b, pairIdx, side, text };
+  return { b, pairIdx, side, text, label };
 }
 
 function prRender() {
@@ -132,6 +175,9 @@ function prRender() {
   box.appendChild(el('p', 'eyebrow kind', pr.mode === 'memory'
     ? 'Обръщай по две плочки и намери двойките'
     : pr.kind === 'tr' ? 'Свържи глагола със значението' : 'Свържи лицето и глагола с формата'));
+  if (pr.pairs.length < pr.size) {
+    box.appendChild(el('p', 'set-note', 'С тези групи стават само ' + pr.pairs.length + ' двойки. Добави групи от Настройки за повече.'));
+  }
 
   let grid;
   const tiles = [];
@@ -169,15 +215,6 @@ function prRender() {
   prRoot.replaceChildren(box);
 }
 
-function prTick() {
-  if (pr.ui) pr.ui.clock.textContent = prClock();
-}
-function prBegin() {
-  if (pr.start) return;
-  pr.start = performance.now();
-  pr.timer = setInterval(prTick, 500);
-}
-
 function prSpeakFr(t) {
   const p = pr.pairs[t.pairIdx];
   if (t.side === 'fr' && pr.kind === 'tr') speak(p.say, t.b);
@@ -186,71 +223,85 @@ function prSpeakFr(t) {
 function prTap(b) {
   if (pr.done || pr.busy || b.classList.contains('found')) return;
   const t = pr.tiles.find(x => x.b === b);
+  if (!t) return;
   prBegin();
   if (pr.mode === 'memory') prTapMemory(t);
   else prTapMatch(t);
 }
 
+function prSelect(t, on) {
+  t.b.classList.toggle('sel', on);
+  t.b.setAttribute('aria-pressed', String(on));
+}
 function prTapMatch(t) {
-  if (pr.sel === t) { t.b.classList.remove('sel'); t.b.setAttribute('aria-pressed', 'false'); pr.sel = null; return; }
+  if (pr.sel === t) { prSelect(t, false); pr.sel = null; return; }
   if (!pr.sel || pr.sel.side === t.side) {
-    if (pr.sel) { pr.sel.b.classList.remove('sel'); pr.sel.b.setAttribute('aria-pressed', 'false'); }
+    if (pr.sel) prSelect(pr.sel, false);
     pr.sel = t;
-    t.b.classList.add('sel');
-    t.b.setAttribute('aria-pressed', 'true');
+    prSelect(t, true);
     prSpeakFr(t);
     return;
   }
   const a = pr.sel;
   pr.sel = null;
-  a.b.classList.remove('sel');
-  a.b.setAttribute('aria-pressed', 'false');
-  prJudge(a, t);
+  prSelect(a, false);
+  prJudge(a, t, true);
 }
 
 function prTapMemory(t) {
   if (pr.open.includes(t)) return;
   t.b.classList.add('open');
-  t.b.setAttribute('aria-label', t.text);
+  t.b.setAttribute('aria-label', t.label);
   pr.open.push(t);
   prSpeakFr(t);
   if (pr.open.length < 2) return;
   const [a, c] = pr.open;
   pr.open = [];
-  if (a.pairIdx === c.pairIdx && a.side !== c.side) {
-    prJudge(a, c);
-  } else {
-    pr.busy = true;
-    pr.mistakes++;
-    a.b.classList.add('wrong');
-    c.b.classList.add('wrong');
-    pr.ui.msg.textContent = 'Не са двойка.';
-    setTimeout(() => {
-      [a, c].forEach(x => {
-        x.b.classList.remove('open', 'wrong');
-        x.b.setAttribute('aria-label', 'Скрита плочка');
-      });
-      pr.busy = false;
-    }, PR_FLIP_BACK_MS);
+  // a mistake only when you could have known: the partner of the first tile, or the second tile, was seen before
+  const partner = pr.tiles.find(x => x.pairIdx === a.pairIdx && x !== a);
+  const avoidable = pr.seen.has(partner) || pr.seen.has(c);
+  pr.seen.add(a);
+  pr.seen.add(c);
+  if (a.pairIdx === c.pairIdx) {
+    prJudge(a, c, false);
+    return;
   }
+  pr.busy = true;
+  if (avoidable) pr.mistakes++;
+  a.b.classList.add('wrong');
+  c.b.classList.add('wrong');
+  pr.ui.msg.textContent = 'Не са двойка.';
+  pr.flipTimer = setTimeout(() => {
+    [a, c].forEach(x => {
+      x.b.classList.remove('open', 'wrong');
+      x.b.setAttribute('aria-label', 'Скрита плочка');
+    });
+    pr.busy = false;
+  }, PR_FLIP_BACK_MS);
 }
 
-function prJudge(a, c) {
+function prJudge(a, c, countMistake) {
   if (a.pairIdx === c.pairIdx) {
     [a, c].forEach(x => {
       x.b.classList.add('found');
       x.b.classList.remove('open');
       x.b.disabled = true;
-      x.b.setAttribute('aria-label', x.text + ' (намерено)');
+      x.b.setAttribute('aria-label', x.label + ' (намерена)');
     });
     pr.found++;
     pr.ui.stat.textContent = 'Двойки: ' + pr.found + ' от ' + pr.pairs.length;
     const p = pr.pairs[a.pairIdx];
     pr.ui.msg.textContent = p.fr + ' = ' + p.bg;
     speak(p.say, (a.side === 'fr' ? a : c).b);
-    if (pr.found === pr.pairs.length) setTimeout(prEnd, 500);
+    if (pr.found === pr.pairs.length) {
+      // the time stops at the last pair; the result screen follows
+      pr.elapsed = prNow();
+      prStopTimer();
+      pr.done = true;
+      pr.endTimer = setTimeout(prEnd, 500);
+    }
   } else {
-    pr.mistakes++;
+    if (countMistake) pr.mistakes++;
     [a, c].forEach(x => {
       x.b.classList.add('wrong');
       setTimeout(() => x.b.classList.remove('wrong'), 450);
@@ -260,32 +311,31 @@ function prJudge(a, c) {
 }
 
 function prEnd() {
-  if (pr.done) return;
-  pr.done = true;
-  prStopTimer();
-  const secs = (performance.now() - pr.start) / 1000;
+  pr.endTimer = null;
+  if (!pr.done || !pr.ui || pr.found < pr.pairs.length) return;
+  const secs = pr.elapsed;
   const key = prBestKey();
-  const old = prBest[key];
+  const old = prOldBest(key);
   const record = !old || secs < old;
   if (record) {
-    prBest[key] = Math.round(secs * 10) / 10;
+    prBest[key] = Math.floor(secs * 10) / 10;
     save('dvoiki-best', prBest);
   }
   const card = el('div', 'qcard');
   card.appendChild(el('p', 'eyebrow kind', 'Bravo !'));
   const head = el('div', 'result-head');
-  head.append(el('p', 'score', prClock()), el('p', 'grade', record ? 'Рекорд !' : 'Рекорд: ' + prFmt(old)));
+  head.append(el('p', 'score', prFmt(secs)), el('p', 'grade', record ? 'Нов рекорд!' : 'Рекорд: ' + prFmt(old)));
   card.appendChild(head);
   const msg = el('p', 'result-msg');
   msg.append(el('i', null, pr.mistakes === 0 ? 'Parfait ! ' : pr.mistakes <= 2 ? 'Très bien ! ' : 'Continue ! '),
     document.createTextNode(pr.pairs.length + ' двойки, ' + (pr.mistakes === 1 ? '1 грешка.' : pr.mistakes + ' грешки.')));
   card.appendChild(msg);
 
-  // all pairs to listen to once more
+  // all pairs to listen to once more; in Спрежение show what was asked next to the form
   const list = el('ul', 'pr-list');
   pr.pairs.forEach(p => {
     const li = el('li');
-    li.append(sayButton(p.say, 'sbtn'), el('span', 'm-prompt', p.bg));
+    li.append(sayButton(p.say, 'sbtn'), el('span', 'm-prompt', pr.kind === 'cj' ? p.fr + (p.tag ? ' · ' + p.tag : '') : p.bg));
     list.appendChild(li);
   });
   card.appendChild(list);
@@ -304,21 +354,13 @@ function prEnd() {
   fresh.focus({ preventScroll: true });
   card.scrollIntoView({ block: 'nearest' });
 }
-function prFmt(secs) {
-  const s = Math.round(secs);
-  return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
-}
 
-/* the clock stops while the tab is not shown */
-VIEWS.filter(v => v !== 'pairs').forEach(v => $('tab-' + v).addEventListener('click', () => {
-  if (pr.start && !pr.done) { prStopTimer(); pr.pausedAt = performance.now(); }
-}));
-$('tab-pairs').addEventListener('click', () => {
-  if (pr.pausedAt && !pr.done) {
-    pr.start += performance.now() - pr.pausedAt;
-    pr.pausedAt = 0;
-    pr.timer = setInterval(prTick, 500);
-  }
+/* the clock stops while the tab is not shown or the app is in the background */
+VIEWS.filter(v => v !== 'pairs').forEach(v => $('tab-' + v).addEventListener('click', prPause));
+$('tab-pairs').addEventListener('click', prResume);
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) prPause();
+  else if (currentView === 'pairs') prResume();
 });
 
 renderPrSettings();

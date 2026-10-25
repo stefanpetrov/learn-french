@@ -93,6 +93,20 @@ function spMatch(expected, heard) {
   }
   return { exp, ok: ek.filter(t => t.st === 'ok').length, total: ek.length, heard, extra: Math.max(0, m - ek.filter(t => t.st === 'ok').length) };
 }
+/* one verdict for a heard attempt, shared with the dialogues' role play:
+   ok = every word heard (saying both forms, "il finit ils finissent", is not enough) */
+function spGrade(r) {
+  const tooMuch = r.extra > Math.max(1, Math.floor(r.total / 2));
+  const all = r.ok === r.total && r.total > 0 && !tooMuch;
+  const level = all ? 'ok' : tooMuch && r.ok === r.total ? 'extra' : r.total && r.ok / r.total >= 0.6 ? 'near' : 'bad';
+  return { all, level };
+}
+const SP_VERDICTS = {
+  ok: ['ok', 'Чудесно! Разбрах всичко.'],
+  extra: ['near', 'Чух и други думи. Кажи само текста.'],
+  near: ['near', 'Почти! Не разбрах думите в червено. Чуй примера и опитай пак.'],
+  bad: ['bad', 'Не те разбрах добре. Чуй примера бавно и опитай пак.']
+};
 // ils aiment (/ilzɛm/) ≠ il aime: before a vowel or a mute h the liaison z is heard
 const spLiaison = (ws, keys) => keys.map((key, k) =>
   /^(ils|elles)$/.test(ws[k]) && /^[aeiouyhàâéèêëîïôûœ]/.test(ws[k + 1] || '') ? key + 'z' : key);
@@ -437,18 +451,14 @@ function spJudge(ui, heardText) {
   if (!q.best || r.ok > q.best.ok) q.best = r;
   sp.srBroken = false;
   ui.note.hidden = true;
-  // saying both forms ("il finit ils finissent") should not pass
-  const tooMuch = r.extra > Math.max(1, Math.floor(r.total / 2));
-  const all = r.ok === r.total && r.total > 0 && !tooMuch;
+  const g = spGrade(r);
+  const all = g.all;
   const words = el('p', 'dk-answer sp-words');
   r.exp.forEach((t, k) => {
     if (k) words.append(' ');
     words.appendChild(el('span', t.st === 'bad' ? 'dk-bad' : null, t.show));
   });
-  const verdict = all ? ['ok', 'Чудесно! Разбрах всичко.']
-    : tooMuch && r.ok === r.total ? ['near', 'Чух и други думи. Кажи само текста.']
-    : r.ok / r.total >= 0.6 ? ['near', 'Почти! Не разбрах думите в червено. Чуй примера и опитай пак.']
-    : ['bad', 'Не те разбрах добре. Чуй примера бавно и опитай пак.'];
+  const verdict = SP_VERDICTS[g.level];
   ui.fb.replaceChildren(el('p', 'verdict ' + verdict[0], verdict[1]), words);
   ui.fb.hidden = false;
   if (all && !q.ok) {

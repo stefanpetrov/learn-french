@@ -763,21 +763,29 @@ footer, .tip {
   background: var(--surface);
   color: var(--fg);
   cursor: pointer;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  -webkit-hyphens: auto;
   transition: background .15s, border-color .15s, opacity .3s, transform .15s;
 }
+.pr-tag { display: block; font-family: var(--f-body); font-weight: 500; font-size: .72rem; color: var(--muted); margin-top: .1rem; }
 .pr-fr { font-family: var(--f-display); font-weight: 600; color: var(--ink); }
 .pr-tile.sel { border-color: var(--ink); background: var(--ink-soft); box-shadow: 0 0 0 2px var(--ink) inset; }
-.pr-tile.found { border-color: var(--ok); color: var(--ok); background: transparent; opacity: .55; cursor: default; }
+.pr-tile.found { border-color: var(--ok); color: var(--ok); background: transparent; opacity: .8; cursor: default; }
 .pr-tile.wrong { border-color: var(--margin); background: color-mix(in srgb, var(--margin) 12%, var(--surface)); animation: pr-shake .35s; }
 @keyframes pr-shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
-.pr-grid .pr-tile { min-height: 76px; display: grid; place-items: center; text-align: center; }
-.pr-grid .pr-tile .pr-face { display: none; }
-.pr-grid .pr-tile .pr-back { font-family: var(--f-display); font-size: 1.4rem; color: var(--muted); }
+.pr-grid .pr-tile { position: relative; min-height: 76px; display: grid; place-items: center; text-align: center; }
+/* the face keeps its place while hidden, so the board never moves when a tile opens */
+.pr-grid .pr-tile .pr-face { visibility: hidden; }
+.pr-grid .pr-tile .pr-back { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--f-display); font-size: 1.4rem; color: var(--muted); }
 .pr-grid .pr-tile:not(.open):not(.found) { background-image: repeating-linear-gradient(45deg, var(--ink-soft) 0 6px, var(--surface) 6px 12px); }
-.pr-grid .pr-tile.open .pr-face, .pr-grid .pr-tile.found .pr-face { display: block; }
+.pr-grid .pr-tile.open .pr-face, .pr-grid .pr-tile.found .pr-face { visibility: visible; }
 .pr-grid .pr-tile.open .pr-back, .pr-grid .pr-tile.found .pr-back { display: none; }
-.pr-grid4 .pr-tile { font-size: .82rem; min-height: 70px; padding: .35rem .3rem; }
+.pr-grid4 .pr-tile { font-size: .85rem; min-height: 70px; padding: .35rem .3rem; }
+@media (max-width: 420px) {
+  .pr-grid, .pr-grid4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pr-grid .pr-tile, .pr-grid4 .pr-tile { font-size: .92rem; min-height: 56px; padding: .35rem .4rem; }
+}
 .pr-msg { min-height: 1.5em; margin: 0; }
 .pr-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .1rem; }
 .pr-list li { display: flex; flex-wrap: wrap; align-items: center; column-gap: .5rem; border-top: 1px solid var(--rule); padding-block: .3rem; }
@@ -814,3 +822,10 @@ button.dl-fr { margin-left: -.4rem; }
 .dl-prompt { font-size: 1rem; color: var(--fg); font-style: italic; }
 .dl-mine { display: grid; gap: .4rem; }
 .dl-roles { justify-content: flex-start; }
+.dl-right-near { color: var(--warn); }
+.dl-skip { justify-self: start; font-size: .85rem; min-height: 32px; }
+/* accent keys stay in reach while typing in a long dialogue */
+.dl-keys { position: sticky; bottom: 0; z-index: 4; background: var(--surface); padding-block: .4rem; border-top: 1px solid var(--rule); }
+/* long gap fields shrink to the bubble instead of widening the page */
+.dl-line, .dl-line > div, .dl-fillrow > .dl-fill { min-width: 0; }
+.ans.dl-gap { box-sizing: border-box; max-width: 100%; }
