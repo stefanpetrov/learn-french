@@ -15,13 +15,13 @@
 - `dialogues.js`, `dialogues-data.js` — кратките диалози
 - `manifest.webmanifest`, `icon*.png`, `icon.svg` — за инсталиране като приложение
 - `fonts.css`, `fonts/` — шрифтовете Literata и Onest (SIL Open Font License), хостнати тук вместо от Google Fonts
-- `analytics.js` — статистика с Google Analytics 4 само след съгласие (сложи ID-то в `GA_ID`)
+- `analytics.js` — статистика с Google Analytics 4 само след съгласие (ID-то е в `GA_ID`)
 - `privacy.html` — страницата „Поверителност“
 - `sw.js` — офлайн режим (при нови файлове смени `VERSION`)
 
 ## Статистика (Google Analytics 4)
 
-Изключена е, докато `GA_ID` в `analytics.js` е празно: тогава няма банер и нищо не се зарежда от Google.
+Включена е с ID `G-1LZNKXXKV6` (`GA_ID` в `analytics.js`). Ако `GA_ID` е празно, няма банер и нищо не се зарежда от Google.
 Посетителят вижда банер „Приемам / Отказвам“. Google се зарежда само след „Приемам“ (Consent Mode „basic“).
 
 Преди да сложиш ID-то, в Google Analytics (на тези настройки разчита `privacy.html`):

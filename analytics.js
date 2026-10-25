@@ -12,7 +12,7 @@
    If the banner text, the purposes or these settings change in substance, rename CONSENT_KEY
    (statistika-v2 …) so that everybody is asked again. */
 
-const GA_ID = '';
+const GA_ID = 'G-1LZNKXXKV6';
 const CONSENT_KEY = 'statistika-v1';
 const CONSENT_VERSION = '2026-10-25';
 const CONSENT_MAX_AGE = 182 * 24 * 3600 * 1000;          // about 6 months
