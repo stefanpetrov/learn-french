@@ -837,3 +837,44 @@ button.dl-fr { margin-left: -.4rem; }
 /* long gap fields shrink to the bubble instead of widening the page */
 .dl-line, .dl-line > div, .dl-fillrow > .dl-fill { min-width: 0; }
 .ans.dl-gap { box-sizing: border-box; max-width: 100%; }
+
+/* ---------- Statistics consent and footer ---------- */
+.site-footer {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 0 16px 2rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem 1.2rem;
+  align-items: center;
+  font-size: .85rem;
+  color: var(--muted);
+}
+.site-footer a, .site-footer .linkbtn { color: var(--muted); min-height: 44px; display: inline-flex; align-items: center; }
+.consent {
+  position: fixed;
+  left: 50%;
+  bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  width: min(44rem, calc(100% - 24px));
+  max-height: 70vh;
+  overflow-y: auto;
+  z-index: 50;
+  background: var(--surface);
+  color: var(--fg);
+  border: 1px solid var(--rule-strong);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgb(0 0 0 / .18);
+  padding: 1rem 1.1rem;
+  display: grid;
+  gap: .5rem;
+}
+.consent h2 { font-family: var(--f-display); font-size: 1.15rem; margin: 0; }
+.consent p { margin: 0; font-size: .92rem; }
+.consent a { color: var(--ink); }
+.consent-state { color: var(--muted); }
+.consent-state:empty { display: none; }
+.consent-actions { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+/* both answers look exactly the same: no nudging */
+.consent-btn { background: var(--ink-soft); border-color: var(--ink); color: var(--ink); min-height: 48px; }
+.consent-note { color: var(--muted); font-size: .8rem !important; }

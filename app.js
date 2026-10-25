@@ -391,6 +391,7 @@ function showView(name) {
   });
   stopAll();
   save('verbes-view', name);
+  gaView(name, $('tab-' + name).textContent);
 }
 VIEWS.forEach(v => $('tab-' + v).addEventListener('click', () => showView(v)));
 
@@ -704,6 +705,7 @@ function grade(ok) {
 function renderCardsEnd() {
   cardUI = null;
   const n = cs.total, first = n - cs.missed.size;
+  track('cards_complete', { kind: cs.kind, cards: n, known_first_time: first });
   const box = el('div', 'qcard');
   box.appendChild(el('p', 'eyebrow kind', 'Bravo !'));
   const score = el('p', 'score', String(first));
@@ -1071,6 +1073,7 @@ function next() {
 function renderResult() {
   const n = st.qs.length, s = st.score;
   const pct = n ? s / n : 0;
+  track('test_complete', { questions: n, score_pct: Math.round(pct * 100), from_cards: !!st.fromCards, retry: !!st.retry });
   const card = el('div', 'qcard');
   card.appendChild(el('p', 'eyebrow kind', 'Résultat'));
 

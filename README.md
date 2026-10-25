@@ -15,4 +15,6 @@
 - `dialogues.js`, `dialogues-data.js` — кратките диалози
 - `manifest.webmanifest`, `icon*.png`, `icon.svg` — за инсталиране като приложение
 - `fonts.css`, `fonts/` — шрифтовете Literata и Onest (SIL Open Font License), хостнати тук вместо от Google Fonts
+- `analytics.js` — статистика с Google Analytics 4 само след съгласие (сложи ID-то в `GA_ID`)
+- `privacy.html` — страницата „Поверителност“
 - `sw.js` — офлайн режим (при нови файлове смени `VERSION`)

@@ -339,6 +339,7 @@ function dlFill(d, body) {
     check.hidden = true;
     const prev = dlProgress[d.id] || {};
     if (ok >= (prev.fillOk || 0)) dlProgress[d.id] = { ...prev, fillOk: ok, fill: ok + '/' + n };
+    track('dialogue_fill', { dialogue: d.id, score_pct: Math.round(ok / n * 100) });
     save('dialozi', dlProgress);
     reset.focus({ preventScroll: true });
     fb.scrollIntoView({ block: 'nearest' });
@@ -398,6 +399,7 @@ function dlRoleStep(d) {
     done.appendChild(act);
     lines.appendChild(done);
     dlProgress[d.id] = { ...(dlProgress[d.id] || {}), role: true };
+    track('dialogue_role', { dialogue: d.id });
     save('dialozi', dlProgress);
     again.focus({ preventScroll: true });
     done.scrollIntoView({ block: 'nearest' });

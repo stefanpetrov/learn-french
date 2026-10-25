@@ -222,6 +222,23 @@
   </div>
 </div>
 
+<footer class="site-footer" id="site-footer">
+  <a href="privacy.html">Поверителност</a>
+  <button type="button" class="linkbtn" id="consent-open" hidden>Настройки за статистика</button>
+</footer>
+
+<section class="consent" id="consent" role="region" aria-labelledby="consent-title" hidden>
+  <h2 id="consent-title">Статистика за посещенията</h2>
+  <p>Ще ми помогнеш ли да видя как се използва приложението? Ако приемеш, Google Analytics ще запише бисквитки и ще изпраща на Google данни за посещението: кои раздели отваряш, какво завършваш, вид устройство и приблизително местоположение. Напредъкът ти остава само на това устройство. <a href="privacy.html#statistika">Подробности</a></p>
+  <p class="consent-state" id="consent-state"></p>
+  <div class="consent-actions">
+    <button type="button" class="btn consent-btn" id="consent-no">Отказвам</button>
+    <button type="button" class="btn consent-btn" id="consent-yes">Приемам</button>
+  </div>
+  <p class="consent-note">Можеш да промениш избора си по всяко време от „Настройки за статистика“ най-долу.</p>
+</section>
+
+<script src="analytics.js"></script>
 <script src="data.js"></script>
 <script src="app.js"></script>
 <script src="dictation.js"></script>

@@ -314,6 +314,7 @@ function prEnd() {
   pr.endTimer = null;
   if (!pr.done || !pr.ui || pr.found < pr.pairs.length) return;
   const secs = pr.elapsed;
+  track('pairs_complete', { mode: pr.mode, kind: pr.kind, pairs: pr.pairs.length, seconds: Math.round(secs), mistakes: pr.mistakes });
   const key = prBestKey();
   const old = prOldBest(key);
   const record = !old || secs < old;

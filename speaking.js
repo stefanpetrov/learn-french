@@ -498,6 +498,7 @@ function spResult() {
   sp.ui = null;
   const n = sp.qs.length, s = sp.score;
   const pct = n ? s / n : 0;
+  track('speaking_complete', { items: n, score_pct: Math.round(pct * 100), recognition: !!SpeechRec && !sp.srBroken });
   const card = el('div', 'qcard');
   card.appendChild(el('p', 'eyebrow kind', 'Résultat'));
   const head = el('div', 'result-head');

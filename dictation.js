@@ -421,6 +421,7 @@ function dkResult() {
   dk.ui = null;
   const n = dk.qs.length, s = dk.score;
   const pct = n ? s / n : 0;
+  track('dictation_complete', { items: n, score_pct: Math.round(pct * 100) });
   const card = el('div', 'qcard');
   card.appendChild(el('p', 'eyebrow kind', 'Résultat'));
   const head = el('div', 'result-head');
