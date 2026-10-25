@@ -1,8 +1,8 @@
 // Offline support: serve from cache, refresh the cache in the background.
 // Bump VERSION when files are added or removed.
-const VERSION = 'v7';
+const VERSION = 'v8';
 const CACHE = 'learn-french-' + VERSION;
-const CORE = ['./', 'index.html', 'style.css', 'data.js', 'app.js', 'dictation.js', 'speaking.js', 'manifest.webmanifest', 'icon.svg', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
+const CORE = ['./', 'index.html', 'style.css', 'data.js', 'app.js', 'dictation.js', 'speaking.js', 'pairs.js', 'dialogues-data.js', 'dialogues.js', 'manifest.webmanifest', 'icon.svg', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting()));

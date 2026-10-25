@@ -381,7 +381,7 @@ bS.addEventListener('click', () => setSlow(true));
 setSlow(slow);
 
 /* ---------- tabs ---------- */
-const VIEWS = ['verbs', 'cards', 'dictation', 'speak', 'test'];
+const VIEWS = ['verbs', 'dialogues', 'cards', 'pairs', 'dictation', 'speak', 'test'];
 let currentView = 'verbs';
 function showView(name) {
   currentView = name;
@@ -1129,6 +1129,8 @@ if (location.hash === '#test') startView = 'test';
 if (location.hash === '#cards') startView = 'cards';
 if (location.hash === '#dictation') startView = 'dictation';
 if (location.hash === '#speak') startView = 'speak';
+if (location.hash === '#pairs') startView = 'pairs';
+if (location.hash === '#dialogues') startView = 'dialogues';
 showView(startView);
 stopAll();
 
