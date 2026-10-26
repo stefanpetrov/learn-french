@@ -712,6 +712,7 @@ function startCards(list, keep, quiet) {
 function srsNewDay() {
   if (cs.day === srsToday()) return;
   if (cardUI && cs.picked && !cs.done && !cs.flipped && !cs.missed.size) startCards(null, null, true);
+  else if (!cardUI && !cs.queue.length && cs.deck) renderCardsEnd(true);   // the end screen speaks of "today" and "tomorrow"
   else renderSrsCounts();
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) srsNewDay(); });
@@ -849,10 +850,12 @@ function grade(ok) {
   setTimeout(renderCard, 220);
 }
 
-function renderCardsEnd() {
+// refresh: the same end screen again after midnight, without counting the round twice
+function renderCardsEnd(refresh) {
+  const hadFocus = cardsRoot.contains(document.activeElement);
   cardUI = null;
   const n = cs.total, first = n - cs.missed.size;
-  track('cards_complete', { kind: cs.kind, cards: n, known_first_time: first });
+  if (!refresh) track('cards_complete', { kind: cs.kind, cards: n, known_first_time: first });
   const t = srsToday();
   const counts = renderSrsCounts();
   showSrsLine(false);   // the result below says it all
@@ -863,7 +866,8 @@ function renderCardsEnd() {
   box.appendChild(score);
   const msg = el('p', 'result-msg');
   const soon = counts.due
-    ? 'Днес остават още ' + cardsWord(counts.due) + ' за преговор' + (counts.tomorrow ? ', утре идват още\u00a0' + counts.tomorrow : '') + '.'
+    ? 'Днес ' + (counts.due === 1 ? 'остава' : 'остават') + ' още ' + cardsWord(counts.due) + ' за преговор'
+      + (counts.tomorrow ? ', утре ' + (counts.tomorrow === 1 ? 'идва' : 'идват') + ' още\u00a0' + counts.tomorrow : '') + '.'
     : counts.tomorrow ? 'Утре за преговор: ' + cardsWord(counts.tomorrow) + '.'
     : counts.next < Infinity ? 'Следващият преговор е ' + srsWhen(counts.next - t) + '.' : '';
   msg.append(el('i', null, first === n ? 'Parfait ! ' : first >= n * 0.7 ? 'Très bien ! ' : 'Continue ! '),
@@ -933,7 +937,7 @@ function renderCardsEnd() {
     const nNew = next.filter(c => srsState(c.key, t) === 'new').length;
     const when = [];
     if (nDue) when.push(nDue === next.length ? 'всички за преговор' : nDue + '\u00a0за преговор');
-    if (nNew) when.push(nNew === next.length ? 'всички нови' : nNew + '\u00a0нови');
+    if (nNew) when.push(nNew === next.length ? 'всички нови' : nNew + '\u00a0' + (nNew === 1 ? 'нова' : 'нови'));
     if (!when.length) when.push('за упражнение');
     desc += ' · ' + when.join(', ');
     const title = fresh.length ? (fresh.some(c => !srs[c.key]) ? 'Нови ' : 'Други ') + word : 'Други форми';
@@ -944,7 +948,7 @@ function renderCardsEnd() {
 
   cardsRoot.replaceChildren(box);
   renderCardSettings();
-  testBtn.focus({ preventScroll: true });
+  if (!refresh || hadFocus) testBtn.focus({ preventScroll: true });
 }
 
 function choiceButton(title, desc, onClick, primary) {

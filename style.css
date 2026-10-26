@@ -1069,3 +1069,135 @@ html.consent-open .dl-keys { position: static; }
 .app-note-text { margin: 0; flex: 1 1 14rem; font-size: .95rem; }
 .app-note-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
 .app-note .btn { padding-inline: 1rem; }
+
+/* ---------- "Преговор навреме" ---------- */
+/* "Преговор навреме": today's counts, a calm line above the card */
+.srs-line {
+  margin: 1rem 0 0;
+  font-size: .85rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.srs-line > span:first-child { color: var(--fg); }
+.srs-line:not([hidden]) + #cards > .fc-box { margin-top: .6rem; }
+
+/* ---------- "60 секунди" (speed.js) ---------- */
+/* start screen */
+.sd-lead { margin: 0; }
+.sd-record { margin: 0; color: var(--muted); }
+.sd-record b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.sd-go { width: 100%; min-height: 60px; font-size: 1.25rem; }
+
+/* the round */
+.sd-card { gap: .8rem; }
+.sd-card .qtop { font-size: 1rem; align-items: baseline; }
+.sd-time { font-weight: 600; color: var(--ink); }
+.sd-score { font-weight: 600; color: var(--fg); }
+.sd-card .progress > i { transition: width .12s linear; }
+.sd-low .sd-time { color: var(--margin); }
+.sd-low .progress > i { background: var(--margin); }
+
+.sd-prompt { display: grid; gap: .1rem; min-width: 0; }
+.sd-who {
+  margin: 0;
+  font-family: var(--f-display);
+  font-weight: 600;
+  font-size: clamp(1.3rem, 6vw, 1.7rem);
+  line-height: 1.2;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.sd-dot { color: var(--muted); font-weight: 400; }
+.sd-tense { margin: 0; font-weight: 600; color: var(--fg); }
+.sd-meaning { margin: 0; font-size: .9rem; color: var(--muted); overflow-wrap: anywhere; }
+
+/* four answers, 2 × 2; the height stays the same from one item to the next */
+.sd-opts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
+.sd-opt {
+  position: relative;
+  font: inherit;
+  font-family: var(--f-display);
+  font-weight: 600;
+  font-size: clamp(1rem, 4.6vw, 1.2rem);
+  line-height: 1.25;
+  min-height: 4.6rem;
+  padding: .5rem .55rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+}
+@media (hover: hover) {
+  .sd-opt:hover { border-color: var(--ink); background: var(--ink-soft); }
+}
+.sd-opt.ok, .sd-opt.bad { box-shadow: inset 0 0 0 2px currentColor; }
+.sd-opt.ok { border-color: var(--ok); color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, var(--surface)); }
+.sd-opt.bad { border-color: var(--margin); color: var(--margin); background: color-mix(in srgb, var(--margin) 10%, var(--surface)); text-decoration: line-through; }
+/* a mark as well as the colour */
+.sd-opt.ok::after, .sd-opt.bad::after {
+  position: absolute;
+  top: .15rem;
+  right: .35rem;
+  font-family: var(--f-body);
+  font-size: .75rem;
+  text-decoration: none;
+}
+.sd-opt.ok::after { content: '✓'; content: '✓' / ''; }
+.sd-opt.bad::after { content: '✗'; content: '✗' / ''; }
+.sd-status { margin: 0; min-height: 1.5em; font-size: .92rem; text-align: center; overflow-wrap: anywhere; }
+.sd-status span { font-family: var(--f-display); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .sd-opt.ok { animation: sd-pop .25s ease-out; }
+  .sd-opt.bad { animation: sd-shake .3s; }
+}
+@keyframes sd-pop { from { transform: scale(.95); } to { transform: none; } }
+@keyframes sd-shake { 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
+@media (prefers-reduced-motion: reduce) {
+  .sd-card .progress > i { transition: none; }
+}
+
+/* tap targets of at least 44px */
+#speed .toggle { min-height: 44px; min-width: 44px; }
+#speed .mistakes .form { min-height: 44px; }
+
+/* ---------- "Числа и часове" (numbers.js) ---------- */
+/* Вариант: the name, and under it the words it uses */
+.nu-variant .toggle {
+  display: inline-grid;
+  justify-items: start;
+  text-align: left;
+  border-radius: 12px;
+  line-height: 1.25;
+  padding-block: .4rem;
+}
+.nu-sub { font-family: var(--f-display); font-size: .8rem; font-weight: 400; color: var(--muted); }
+.nu-variant .toggle[aria-pressed="true"] .nu-sub { color: inherit; }
+
+/* the answer: digits, with € after a price */
+.nu-line { line-height: 1.6; display: flex; align-items: baseline; flex-wrap: wrap; gap: .4rem; }
+.ans.nu-ans { width: 7em; min-height: 44px; font-variant-numeric: tabular-nums; }
+.ans.nu-ans::placeholder { color: var(--muted); font-weight: 400; font-style: italic; }
+.ans.nu-ans:disabled { opacity: .55; cursor: default; }
+.nu-unit { color: var(--muted); font-weight: 600; }
+.nu-fmt { margin: -.5rem 0 0; font-size: .92rem; font-weight: 600; color: var(--warn); }
+.nu-fmt:empty { display: none; }
+
+/* after the answer */
+.nu-digits { font-weight: 600; font-size: 1.05rem; color: var(--fg); font-variant-numeric: tabular-nums; }
+.nu-given { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.nu-say > span, .nu-other > span { min-width: 0; overflow-wrap: anywhere; }
+#numbers .feedback .sbtn, #numbers .feedback .form,
+#numbers .mistakes .sbtn, #numbers .mistakes .form { min-height: 44px; font-family: var(--f-display); font-size: 1.05rem; }
+#numbers .mistakes .sbtn { justify-self: start; }
+
+/* tap targets of at least 44px, and buttons that wait for the first "Чуй" */
+#numbers .toggle { min-height: 44px; }
+#numbers .btn:disabled { opacity: .5; cursor: default; }

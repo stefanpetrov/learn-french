@@ -453,8 +453,10 @@ function lsResult() {
 /* 1–3 answer while the question has focus; Enter on the card goes on */
 lsPlay.addEventListener('keydown', e => {
   const ui = ls.ui;
-  if (!ui || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
-  const k = ['1', '2', '3'].indexOf(e.key);
+  if (!ui || e.altKey || e.ctrlKey || e.metaKey) return;
+  // also the top-row digit keys by position (AZERTY types & é " without Shift)
+  let k = ['1', '2', '3'].indexOf(e.key);
+  if (k < 0) k = ['Digit1', 'Digit2', 'Digit3'].indexOf(e.code);
   if (k >= 0 && ui.heard && !ls.answered) {
     e.preventDefault();
     lsAnswer(k);

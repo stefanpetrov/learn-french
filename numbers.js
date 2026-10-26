@@ -44,11 +44,14 @@ function nuBelow1000(n, v) {
   const cent = h === 1 ? 'cent' : NU_UNITS[h] + (r ? ' cent' : ' cents');
   return r ? cent + ' ' + nuBelow100(r, v) : cent;
 }
-function nuWords(n, v, fem) {
+/* ord: the number names a page, a room, a bus or a year, not an amount; then a final
+   quatre-vingts / cents loses its s (la page quatre-vingt, en mille neuf cent quatre-vingt) */
+function nuWords(n, v, fem, ord) {
   const th = Math.floor(n / 1000), r = n % 1000;
   // mille never changes: deux mille
   const s = !th ? nuBelow1000(r, v) : (th === 1 ? 'mille' : NU_UNITS[th] + ' mille') + (r ? ' ' + nuBelow1000(r, v) : '');
-  return fem ? s.replace(/(^|[ -])un$/, '$1une') : s;
+  const w = fem ? s.replace(/(^|[ -])un$/, '$1une') : s;
+  return ord ? w.replace(/(vingt|cent)s$/, '$1') : w;
 }
 
 /* how the number is built, for the hints: soixante-dix-huit = 60 + 18, quatre-vingt-dix-sept = 4 × 20 + 17 */
@@ -96,11 +99,11 @@ function nuCombos(n, v) {
 const NU_BIG_TENS = { 6: 'soixante = 60', 7: 'septante = 70', 8: 'quatre-vingts = 80', 9: 'nonante = 90' };
 
 /* a short hint for the usual slips with this number, or null. d: the digits typed */
-function nuNumHint(n, d, v, fem) {
+function nuNumHint(n, d, v, fem, ord) {
   if (!/^\d+$/.test(d)) return null;
   const typed = parseInt(d, 10);
   if (typed === n) return null;
-  const w = nuWords(n, v, fem);
+  const w = nuWords(n, v, fem, ord);
   const c = nuCombos(n, v).find(o => o.d === d.replace(/^0+(?=\d)/, ''));
   if (c) return w + ' = ' + c.x + ' = ' + n;
   const r = n % 100, t = typed % 100, diff = typed - n;
@@ -113,7 +116,7 @@ function nuNumHint(n, d, v, fem) {
     // the unit is right, the tens are not: septante = 70, soixante = 60
     if (r >= 60 && t >= 60 && t % 10 === r % 10) {
       if (v === 'be') return NU_BIG_TENS[Math.floor(r / 10)] + ', ' + NU_BIG_TENS[Math.floor(t / 10)] + '.';
-      return w + ' = ' + n + '. ' + typed + ' е ' + nuWords(typed, v, fem) + '.';
+      return w + ' = ' + n + '. ' + typed + ' е ' + nuWords(typed, v, fem, ord) + '.';
     }
     // seize ≠ six, douze ≠ deux
     const teen = r >= 12 && r <= 16 && diff === -10 ? r : r >= 2 && r <= 6 && diff === 10 ? r + 10 : 0;
@@ -178,15 +181,15 @@ const NU_POSTCODES = [[1000, 'Bruxelles'], [1020, 'Laeken'], [1030, 'Schaerbeek'
   [1170, 'Watermael-Boitsfort'], [1180, 'Uccle'], [1190, 'Forest'], [1210, 'Saint-Josse']];
 const NU_NUM_FRAMES = [
   { before: 'Je prends le tram ', after: '.', pick: () => nuWeighted([3, 4, 7, 8, 9, 19, 25, 39, 51, 55, 62, 81, 82, 92, 93, 97]) },
-  { before: 'Je prends le bus ', after: '.', pick: () => nuPick(12, 99) },
-  { before: "J'habite au numéro ", after: '.', pick: () => nuPick(2, 199) },
-  { before: 'La chambre ', after: '.', pick: () => nuPick(2, 399) },
+  { before: 'Je prends le bus ', after: '.', pick: () => nuPick(12, 99), ord: true },
+  { before: "J'habite au numéro ", after: '.', pick: () => nuPick(2, 199), ord: true },
+  { before: 'La chambre ', after: '.', pick: () => nuPick(2, 399), ord: true },
   { before: 'Il a ', after: ' ans.', pick: () => nuPick(18, 99) },
   { before: 'Ma grand-mère a ', after: ' ans.', pick: () => nuPick(60, 99) },
   { before: 'Le train part de la voie ', after: '.', pick: () => nuRand(2, 22) },
-  { before: "C'est à la page ", after: '.', pick: () => nuPick(2, 300) },
+  { before: "C'est à la page ", after: '.', pick: () => nuPick(2, 300), ord: true },
   { before: 'Il y a ', after: ' personnes.', pick: () => nuPick(2, 99), fem: true },
-  { before: 'Il est né en ', after: '.', pick: () => nuPick(1940, 2012) },
+  { before: 'Il est né en ', after: '.', pick: () => nuPick(1940, 2012), ord: true },
   { before: "Le code postal, c'est ", after: '.', pick: () => nuWeighted(NU_POSTCODES.map(p => p[0])), post: true }
 ];
 const NU_PRICE_FRAMES = [['Ça fait ', '.'], ["C'est ", '.'], ['Ça coûte ', '.'], ['Le billet coûte ', '.'], ['Le menu est à ', '.']];
@@ -208,11 +211,11 @@ function nuItem(type, v, before, words, after, extra) {
 }
 function nuNumQ(f, v) {
   const n = f.pick();
-  const words = nuWords(n, v, f.fem);
+  const words = nuWords(n, v, f.fem, f.ord);
   const post = f.post ? NU_POSTCODES.find(p => p[0] === n) : null;
   return nuItem('num', v, f.before, words, f.after, {
-    n, fem: !!f.fem, key: 'num:' + n, digits: String(n),
-    other: nuWords(n, nuOther(v), f.fem),
+    n, fem: !!f.fem, ord: !!f.ord, key: 'num:' + n, digits: String(n),
+    other: nuWords(n, nuOther(v), f.fem, f.ord),
     note: post ? n + ' = ' + post[1] : ''
   });
 }
@@ -296,7 +299,7 @@ function nuBuild() {
 /* ---------- checking ---------- */
 const nuSameTime = (a, b) => a[0] % 24 === b[0] % 24 && a[1] === b[1];
 function nuPriceHint(q, got) {
-  if (got.e === q.e && q.c && !got.cents) return 'Числото след euros е центовете: ' + q.words + ' = ' + q.digits + '.';
+  if (got.e === q.e && q.c && !got.cents) return 'Числото след ' + (q.e === 1 ? 'euro' : 'euros') + ' е центовете: ' + q.words + ' = ' + q.digits + '.';
   if (q.c && !got.cents && got.d === q.e + nuPad(q.c)) return 'Между еврото и центовете сложи запетая: ' + q.digits + '.';
   if (got.e !== q.e) return nuNumHint(q.e, got.d, q.v);
   if (got.c !== q.c && got.cents) return nuNumHint(q.c, nuPad(got.c), q.v);
@@ -312,7 +315,7 @@ function nuTimeHint(q, got) {
 }
 /* { verdict: ok | near | bad, near?: text, why?: hint } */
 function nuJudge(q, got) {
-  if (q.type === 'num') return got.n === q.n ? { verdict: 'ok' } : { verdict: 'bad', why: nuNumHint(q.n, got.d, q.v, q.fem) };
+  if (q.type === 'num') return got.n === q.n ? { verdict: 'ok' } : { verdict: 'bad', why: nuNumHint(q.n, got.d, q.v, q.fem, q.ord) };
   if (q.type === 'price') return got.e === q.e && got.c === q.c ? { verdict: 'ok' } : { verdict: 'bad', why: nuPriceHint(q, got) };
   const g = [got.h, got.m];
   if (q.alt.some(a => nuSameTime(a, g))) return { verdict: 'ok' };

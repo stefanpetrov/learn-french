@@ -13,6 +13,7 @@ const SD_GUARD_MS = 700;    // right after the end a late tap on "Пак" or "Н
 // how long the marks stay before the next item: [right, wrong or a second try]
 const SD_WAIT = [300, 700];
 const SD_WAIT_REDUCED = [150, 450];
+const SD_SHOW_GUARD_MS = 300;
 
 const savedSd = load('igri-60-set', {}) || {};
 const sd = {
@@ -20,7 +21,7 @@ const sd = {
   groups: validSet(savedSd.groups, GROUP_IDS, GROUP_IDS),
   // the round: left = ms left when the clock last stopped, since = when it started again (0: stopped)
   running: false, left: 0, since: 0, tick: null, wait: null, busy: false, key: '', endedAt: -Infinity,
-  q: null, shown: 0, answered: 0, score: 0, wrong: [], again: [], deck: [], tdeck: [], lastInf: null,
+  q: null, shown: 0, shownAt: 0, answered: 0, score: 0, wrong: [], again: [], deck: [], tdeck: [], lastInf: null,
   ui: null
 };
 let sdBest = load('igri-60-best', {});
@@ -208,7 +209,7 @@ function sdBegin() {
   sdStop();
   Object.assign(sd, {
     running: true, left: SD_SECONDS * 1000, key: sdKey(sd.tenses),
-    q: null, shown: 0, answered: 0, score: 0, wrong: [], again: [], deck: [], tdeck: [], lastInf: null
+    q: null, shown: 0, shownAt: 0, answered: 0, score: 0, wrong: [], again: [], deck: [], tdeck: [], lastInf: null
   });
   sdRenderRun();
   sdShow(sdNextItem());
@@ -265,6 +266,7 @@ function sdShow(q) {
   const ui = sd.ui;
   sd.q = q;
   sd.shown++;
+  sd.shownAt = performance.now();
   sd.lastInf = q.inf;
   sd.busy = false;
   const tl = TENSE[q.tense].label;
@@ -286,6 +288,9 @@ function sdShow(q) {
 function sdAnswer(k) {
   const ui = sd.ui, q = sd.q;
   if (!sd.running || sd.busy || !ui || !q || k >= q.opts.length || !sdCanPlay()) return;
+  // a second tap of a double tap on Старт / Пак (or on the same spot right after a quick answer)
+  // lands on the new options: nobody can read a new item that fast
+  if (performance.now() - sd.shownAt < SD_SHOW_GUARD_MS) return;
   sd.busy = true;
   const good = k === q.answer;
   // only the first try counts; a miss comes back once, 3 items later
@@ -409,9 +414,11 @@ function sdWhy(q, given) {
 
 /* keys 1–4 answer while the round runs and the game is on screen */
 document.addEventListener('keydown', e => {
-  if (!sd.running || !sd.ui || !gameShown('speed') || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || e.repeat) return;
+  if (!sd.running || !sd.ui || !gameShown('speed') || e.altKey || e.ctrlKey || e.metaKey || e.repeat) return;
   if (e.target && e.target.closest && e.target.closest('input, textarea, select, [contenteditable="true"]')) return;
-  const k = ['1', '2', '3', '4'].indexOf(e.key);
+  // the digit keys of the top row by position too: on a Belgian AZERTY keyboard they type & é " '
+  let k = ['1', '2', '3', '4'].indexOf(e.key);
+  if (k < 0) k = ['Digit1', 'Digit2', 'Digit3', 'Digit4'].indexOf(e.code);
   if (k < 0) return;
   e.preventDefault();
   sdAnswer(k);
