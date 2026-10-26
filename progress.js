@@ -10,7 +10,7 @@ const PG_KEYS = /^(verbes-|cartes-|dvoiki-|diktovka-|govor-|dialozi|igri-)/;
 const PG_HINT = 'verbes-ios-hint';            // the iPhone hint was closed
 const PG_DONE = 'verbes-progres-zareden';     // written with an import, read once after the reload
 const PG_LOCAL = new Set([PG_HINT, PG_DONE]); // about this device only: never moved
-const PG_SOME = ['cartes-box', 'dvoiki-best', 'dialozi', 'verbes-test'];
+const PG_SOME = ['cartes-srs', 'cartes-box', 'dvoiki-best', 'dialozi', 'verbes-test', 'igri-60-best'];
 const PG_CODE = 'VDL1.';
 const PG_MAX = 1024 * 1024;
 
@@ -79,12 +79,16 @@ function pgDescribe(get, keys) {
   const obj = k => {
     try { const v = JSON.parse(get(k)); return v && typeof v === 'object' && !Array.isArray(v) ? v : null; } catch (e) { return null; }
   };
-  const known = typeof KNOWN_BOX === 'number' ? KNOWN_BOX : 3;
   const parts = [];
-  const box = obj('cartes-box');
-  if (box) parts.push(pgCount(Object.values(box).filter(x => x >= known).length, 'научена карта', 'научени карти'));
+  // cards: the review schedule ([level, due day], learned from level 3); the old counter only when it is missing
+  const srs = obj('cartes-srs'), box = obj('cartes-box');
+  const learned = typeof SRS_KNOWN === 'number' ? SRS_KNOWN : 3;
+  if (srs) parts.push(pgCount(Object.values(srs).filter(x => Array.isArray(x) && x[0] >= learned).length, 'научена карта', 'научени карти'));
+  else if (box) parts.push(pgCount(Object.values(box).filter(x => x >= 3).length, 'научена карта', 'научени карти'));
   const best = obj('dvoiki-best');
   if (best && Object.keys(best).length) parts.push(pgCount(Object.keys(best).length, 'рекорд в „Двойки“', 'рекорда в „Двойки“'));
+  const best60 = obj('igri-60-best');
+  if (best60 && Object.keys(best60).length) parts.push('рекорд в „60 секунди“');
   const dl = obj('dialozi');
   if (dl && Object.keys(dl).length) parts.push(pgCount(Object.keys(dl).length, 'диалог', 'диалога'));
   return parts.length ? parts.join(', ') + ' и настройките' : 'само настройки';

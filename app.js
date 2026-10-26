@@ -497,17 +497,95 @@ function nearMatch(exp, giv) {
 /* ---------- flashcards ---------- */
 const KINDS = [['tr', 'Превод'], ['rv', 'Обратно'], ['cj', 'Спрежение']];
 const CARD_COUNTS = [10, 20, 30];
-const KNOWN_BOX = 3;
 const savedCards = load('cartes-set', {});
 const cs = {
   kind: KINDS.some(k => k[0] === savedCards.kind) ? savedCards.kind : 'tr',
   count: CARD_COUNTS.includes(savedCards.count) ? savedCards.count : 10,
   tenses: validSet(savedCards.tenses, TENSE_IDS, ['pr']),
   groups: validSet(savedCards.groups, GROUP_IDS, GROUP_IDS),
-  queue: [], total: 0, done: 0, missed: new Set(), streak: 0, flipped: false, busy: false
+  queue: [], total: 0, done: 0, missed: new Set(), streak: 0, flipped: false, busy: false,
+  picked: false,   // the deck came from pickDeck (not "Пак същите" or "Само трудните")
+  day: null        // the day the counts on screen are for
 };
-let boxes = load('cartes-box', {});
-if (typeof boxes !== 'object' || Array.isArray(boxes)) boxes = {};
+
+/* ---------- "Преговор навреме": when a card comes back ---------- */
+/* Each card has a level and the day it is due again, saved in 'cartes-srs' as
+   key -> [level, dueDay]. A day is a local calendar day, so "днес" follows the learner's
+   clock and time zone. "Знам" on a card that is due (or new): one level up, back after
+   SRS_INTERVALS[old level] days. "Знам" before the card's day changes nothing. "Още не":
+   level 0, due today. A card is "научена" from level SRS_KNOWN: known on three different days. */
+const SRS_KEY = 'cartes-srs';
+const SRS_INTERVALS = [1, 3, 7, 16, 35, 75];   // days; the last one repeats
+const SRS_KNOWN = 3;
+const srsDay = d => Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 864e5);
+const srsToday = () => srsDay(new Date());
+function srsHash(s) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  return h >>> 0;
+}
+function srsLoad() {
+  const raw = load(SRS_KEY, null);
+  const out = {};
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+    Object.keys(raw).forEach(k => {
+      const v = raw[k];
+      if (Array.isArray(v) && Number.isInteger(v[0]) && v[0] >= 0 && Number.isInteger(v[1])) out[k] = [v[0], v[1]];
+    });
+    return out;
+  }
+  // once, from the old counts ('cartes-box': key -> "Знам" in a row, 0..5), which stay as they are.
+  // Known cards come back evenly over the next 7 days (in the order of a hash of their key,
+  // so the same box always gives the same days), and the first day is not flooded.
+  const box = load('cartes-box', {});
+  const t = srsToday();
+  const known = [];
+  if (box && typeof box === 'object' && !Array.isArray(box)) {
+    Object.keys(box).forEach(k => {
+      const n = Math.floor(Number(box[k]));
+      if (!Number.isFinite(n)) return;
+      if (n >= SRS_KNOWN) known.push(k);
+      else out[k] = [Math.max(n, 0), t];
+    });
+  }
+  known.sort((a, b) => srsHash(a) - srsHash(b) || (a < b ? -1 : 1))
+    .forEach((k, i) => { out[k] = [SRS_KNOWN, t + 1 + i % 7]; });
+  // nothing to carry over: nothing is written until the first card is played
+  if (Object.keys(out).length) save(SRS_KEY, out);
+  return out;
+}
+let srs = srsLoad();
+
+// 'new' (never played), 'due' (today or earlier) or 'later'
+function srsState(key, t) {
+  const s = srs[key];
+  return !s ? 'new' : s[1] <= t ? 'due' : 'later';
+}
+function srsCounts(pool, t) {
+  const n = { due: 0, fresh: 0, known: 0, tomorrow: 0, next: Infinity, total: pool.length };
+  pool.forEach(c => {
+    const s = srs[c.key];
+    if (!s) { n.fresh++; return; }
+    if (s[1] <= t) n.due++;
+    else {
+      if (s[1] === t + 1) n.tomorrow++;
+      n.next = Math.min(n.next, s[1]);
+    }
+    if (s[0] >= SRS_KNOWN) n.known++;
+  });
+  return n;
+}
+function srsGrade(key, ok) {
+  const t = srsToday();
+  const s = srs[key];
+  if (!ok) srs[key] = [0, t];
+  else if (!s || s[1] <= t) {
+    const lv = s ? s[0] : 0;
+    srs[key] = [lv + 1, t + SRS_INTERVALS[Math.min(lv, SRS_INTERVALS.length - 1)]];
+  } else return;   // known before its day: it keeps its level and its day
+  save(SRS_KEY, srs);
+}
+const srsWhen = d => d === 1 ? 'утре' : 'след\u00a0' + d + '\u00a0дни';
 
 function cardPool() {
   const pool = [];
@@ -521,11 +599,26 @@ function cardPool() {
   });
   return pool;
 }
-function knownCount(pool) {
-  return pool.filter(c => (boxes[c.key] || 0) >= KNOWN_BOX).length;
-}
 function saveCardSettings() {
   save('cartes-set', { kind: cs.kind, count: cs.count, tenses: [...cs.tenses], groups: [...cs.groups] });
+}
+
+/* today's counts for the current settings: the line above the card and the one in Настройки */
+function renderSrsCounts() {
+  const t = srsToday();
+  cs.day = t;
+  const n = srsCounts(cardPool(), t);
+  const known = 'Научени:\u00a0' + n.known + '\u00a0от\u00a0' + n.total;
+  const items = n.due ? ['Днес за преговор:\u00a0' + n.due, 'Нови:\u00a0' + n.fresh, known]
+    : [n.fresh ? 'Днес няма карти за преговор\u00a0– учиш нови' : 'Днес няма карти за преговор\u00a0– следващите са ' + srsWhen(n.next - t), known];
+  const line = $('c-srs');
+  if (line) line.replaceChildren(...items.flatMap((x, i) => i ? [document.createTextNode(' · '), el('span', null, x)] : [el('span', null, x)]));
+  $('c-known').textContent = 'Карти с тези настройки: ' + n.total + '. За преговор днес: ' + n.due + ', нови: ' + n.fresh + ', научени: ' + n.known + '.';
+  return n;
+}
+function showSrsLine(on) {
+  const line = $('c-srs');
+  if (line) line.hidden = !on;
 }
 
 function renderCardSettings() {
@@ -535,12 +628,12 @@ function renderCardSettings() {
   $('c-groups').replaceChildren(...setToggles(GROUP_ITEMS, cs.groups, cardSettingsChanged));
   $('c-count').replaceChildren(...CARD_COUNTS.map(n => toggleBtn(String(n), cs.count === n, () => { cs.count = n; cardSettingsChanged(); })));
   const pool = cardPool();
-  $('c-known').textContent = 'Научени карти с тези настройки: ' + knownCount(pool) + ' от ' + pool.length + '.';
   const parts = [KINDS.find(k => k[0] === cs.kind)[1], cardsWord(Math.min(cs.count, pool.length))];
   if (cs.kind === 'cj') parts.push(tensesLabel(cs.tenses));
   const gl = groupsLabel(cs.groups);
   if (gl) parts.push(gl);
   $('c-sum').textContent = parts.join(' · ');
+  renderSrsCounts();
 }
 function cardSettingsChanged() {
   saveCardSettings();
@@ -549,42 +642,47 @@ function cardSettingsChanged() {
 }
 $('c-reset').addEventListener('click', () => {
   if (!confirm('Да изчистя ли прогреса по всички карти?')) return;
-  boxes = {};
-  save('cartes-box', boxes);
+  srs = {};
+  save(SRS_KEY, srs);
+  save('cartes-box', {});
   renderCardSettings();
   startCards();
 });
 
-/* Pick a deck of cs.count cards: least known first (random within the same
-   level) and one card per verb before any verb repeats. Cards come in tiers:
-   verbs not in skipInf first, then unplayed cards of those verbs (other forms),
-   and the cards in skipKeys only when nothing else is left. */
+/* Pick a deck of cs.count cards: first the cards due today or earlier (most overdue first,
+   then lowest level), then new cards (random), and cards not due yet (earliest first) only
+   when nothing else is left. One card per verb before any verb repeats. Cards also come in
+   tiers, so "Нови думи" stays new: verbs not in skipInf first, then unplayed cards of those
+   verbs (other forms), and the cards in skipKeys only when nothing else is left. */
 function pickDeck(skipInf, skipKeys) {
   const skipV = skipInf || new Set();
   const skipK = skipKeys || new Set();
-  const ranked = shuffle(cardPool())
-    .map(c => [c, boxes[c.key] || 0])
-    .sort((a, b) => a[1] - b[1])
-    .map(x => x[0]);
-  const tiers = [
-    ranked.filter(c => !skipV.has(c.inf)),
-    ranked.filter(c => skipV.has(c.inf) && !skipK.has(c.key)),
-    ranked.filter(c => skipV.has(c.inf) && skipK.has(c.key))
-  ];
-  const deck = [];
-  tiers.forEach(tier => {
-    const used = new Set();
-    for (const c of tier) {
-      if (deck.length >= cs.count) break;
-      if (used.has(c.inf)) continue;
-      used.add(c.inf);
-      deck.push(c);
-    }
-    for (const c of tier) {
-      if (deck.length >= cs.count) break;
-      if (!deck.includes(c)) deck.push(c);
-    }
+  const t = srsToday();
+  const STATES = ['due', 'new', 'later'];
+  // lists[tier][state], each in random order (the sort below is stable, so ties stay random)
+  const lists = [0, 1, 2].map(() => STATES.map(() => []));
+  shuffle(cardPool()).forEach(c => {
+    const tier = !skipV.has(c.inf) ? 0 : !skipK.has(c.key) ? 1 : 2;
+    lists[tier][STATES.indexOf(srsState(c.key, t))].push(c);
   });
+  const byDay = (a, b) => srs[a.key][1] - srs[b.key][1] || srs[a.key][0] - srs[b.key][0];
+  lists.forEach(l => { l[0].sort(byDay); l[2].sort(byDay); });
+  // [tier, state] in the order they are used: due, then new cards of other verbs and of other
+  // forms; cards not due yet after them; the cards in skipKeys last
+  const steps =[[0, 0], [0, 1], [1, 0], [1, 1], [0, 2], [1, 2], [2, 0], [2, 1], [2, 2]];
+  const deck = [], keys = new Set(), verbs = new Set();
+  const add = c => { deck.push(c); keys.add(c.key); verbs.add(c.inf); };
+  for (const [tier, state] of steps) {
+    const list = lists[tier][state];
+    for (const c of list) {
+      if (deck.length >= cs.count) break;
+      if (!verbs.has(c.inf)) add(c);
+    }
+    for (const c of list) {
+      if (deck.length >= cs.count) break;
+      if (!keys.has(c.key)) add(c);
+    }
+  }
   return shuffle(deck);
 }
 
@@ -593,10 +691,11 @@ const cardsWord = k => k + '\u00a0' + (k === 1 ? 'карта' : 'карти');
 const questionsWord = k => k + '\u00a0' + (k === 1 ? 'въпрос' : 'въпроса');
 
 /* keep: { inf, keys } of the round this one replays, so "new words" stays new
-   after "same cards" or "only the hard ones" */
-function startCards(list, keep) {
+   after "same cards" or "only the hard ones". quiet: do not read the first card out. */
+function startCards(list, keep, quiet) {
   stopAll();
   const deck = list || pickDeck();
+  cs.picked = !list;
   cs.deck = deck.slice();
   cs.roundInf = new Set([...(keep ? keep.inf : []), ...deck.map(c => c.inf)]);
   cs.roundKeys = new Set([...(keep ? keep.keys : []), ...deck.map(c => c.key)]);
@@ -606,8 +705,17 @@ function startCards(list, keep) {
   cs.missed = new Set();
   cs.missedCards = [];
   cs.streak = 0;
-  renderCard();
+  renderCard(quiet);
 }
+
+/* a new day while the app stays open: fresh counts, and a fresh deck if this one is untouched */
+function srsNewDay() {
+  if (cs.day === srsToday()) return;
+  if (cardUI && cs.picked && !cs.done && !cs.flipped && !cs.missed.size) startCards(null, null, true);
+  else renderSrsCounts();
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) srsNewDay(); });
+$('tab-cards').addEventListener('click', srsNewDay);
 
 function cardFaces(c) {
   const front = el('div', 'face front');
@@ -641,11 +749,13 @@ function cardSpeech(c) {
 const cardsRoot = $('cards');
 let cardUI = null;
 
-function renderCard() {
+function renderCard(quiet) {
   cs.flipped = false;
   cs.busy = false;
   if (!cs.queue.length) { renderCardsEnd(); return; }
   const c = cs.queue[0];
+  renderSrsCounts();
+  showSrsLine(true);
 
   const box = el('div', 'fc-box');
   const top = el('div', 'qtop');
@@ -699,7 +809,7 @@ function renderCard() {
     else if (!cs.flipped && Math.abs(dx) < 10 && Math.abs(dy) < 10) doFlip();
   });
 
-  if (c.kind === 'tr' && currentView === 'cards') speak(c.inf, front.querySelector('.say'));
+  if (c.kind === 'tr' && currentView === 'cards' && !quiet) speak(c.inf, front.querySelector('.say'));
 }
 
 function doFlip() {
@@ -720,20 +830,18 @@ function grade(ok) {
   if (!cardUI || !cs.flipped || cs.busy) return;
   cs.busy = true;
   const { c, card } = cardUI;
-  const b = boxes[c.key] || 0;
+  srsGrade(c.key, ok);
   if (ok) {
-    boxes[c.key] = Math.min(b + 1, 5);
     cs.streak++;
     cs.done++;
     cs.queue.shift();
   } else {
-    boxes[c.key] = 0;
+    // not known yet: it comes back 3 cards later in this round
     cs.streak = 0;
     if (!cs.missed.has(c.key)) { cs.missed.add(c.key); cs.missedCards.push(c); }
     const item = cs.queue.shift();
     cs.queue.splice(Math.min(3, cs.queue.length), 0, item);
   }
-  save('cartes-box', boxes);
   stopAll();
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (reduce) { renderCard(); return; }
@@ -745,15 +853,22 @@ function renderCardsEnd() {
   cardUI = null;
   const n = cs.total, first = n - cs.missed.size;
   track('cards_complete', { kind: cs.kind, cards: n, known_first_time: first });
+  const t = srsToday();
+  const counts = renderSrsCounts();
+  showSrsLine(false);   // the result below says it all
   const box = el('div', 'qcard');
   box.appendChild(el('p', 'eyebrow kind', 'Bravo !'));
   const score = el('p', 'score', String(first));
   score.appendChild(el('small', null, ' / ' + n + ' от първия път'));
   box.appendChild(score);
-  const pool = cardPool();
   const msg = el('p', 'result-msg');
+  const soon = counts.due
+    ? 'Днес остават още ' + cardsWord(counts.due) + ' за преговор' + (counts.tomorrow ? ', утре идват още\u00a0' + counts.tomorrow : '') + '.'
+    : counts.tomorrow ? 'Утре за преговор: ' + cardsWord(counts.tomorrow) + '.'
+    : counts.next < Infinity ? 'Следващият преговор е ' + srsWhen(counts.next - t) + '.' : '';
   msg.append(el('i', null, first === n ? 'Parfait ! ' : first >= n * 0.7 ? 'Très bien ! ' : 'Continue ! '),
-    document.createTextNode('Научени карти: ' + knownCount(pool) + ' от ' + pool.length + '. Една карта е научена, когато я знаеш ' + KNOWN_BOX + ' пъти подред.'));
+    document.createTextNode('Научени карти: ' + counts.known + '\u00a0от\u00a0' + counts.total + '. ' + (soon ? soon + ' ' : '') +
+      'Една карта е научена, когато я знаеш в три различни дни.'));   // three = SRS_KNOWN
   box.appendChild(msg);
 
   // what next: test these words, replay the same cards, or new words
@@ -772,9 +887,11 @@ function renderCardsEnd() {
       : (one ? 'Тест с тази дума' : 'Тест с тези думи'),
     (cj ? (one ? 'Пишеш същата форма' : 'Пишеш същите форми') : 'Виждаш значението и пишеш глагола на френски') + ' · ' + questionsWord(n),
     () => startTestFromCards(deck), true);
+  // the cards just known are not due again today, so a replay is practice only
+  const practice = deck.every(c => srsState(c.key, t) === 'later') ? ' за упражнение' : '';
   const againBtn = choiceButton(
     one ? 'Пак същата карта' : 'Пак същите карти',
-    one ? 'Изиграй я отново' : 'Изиграй отново същите ' + cardsWord(n),
+    (one ? 'Изиграй я отново' : 'Изиграй отново същите ' + cardsWord(n)) + practice,
     () => startCards(shuffle(deck.slice()), round));
   choices.append(testBtn, againBtn);
   if (missed.length && missed.length < n) {
@@ -802,16 +919,25 @@ function renderCardsEnd() {
         set.scrollIntoView({ block: 'nearest' });
       });
   } else {
-    const verbsTxt = newVerbs === 1 ? '1\u00a0нов глагол' : newVerbs + '\u00a0нови глагола';
+    const verbsTxt = newVerbs === 1 ? '1\u00a0друг глагол' : newVerbs + '\u00a0други глагола';
     const parts = [];
-    if (fresh.length) parts.push(fresh.length + '\u00a0с ' + (cj ? verbsTxt : fresh.length === 1 ? 'нова дума' : 'нови думи'));
+    if (fresh.length) parts.push(fresh.length + '\u00a0с ' + (cj ? verbsTxt : fresh.length === 1 ? 'друга дума' : 'други думи'));
     if (otherForms) parts.push(otherForms + '\u00a0' + (otherForms === 1 ? 'друга форма' : 'други форми') + ' на същите глаголи');
     if (repeats) parts.push(repeats + '\u00a0от досегашните');
     let desc;
     if (fresh.length === next.length) desc = cardsWord(next.length) + ' с ' + (cj ? verbsTxt : 'други думи');
     else if (otherForms === next.length) desc = cardsWord(next.length) + ' с други форми на същите глаголи';
     else desc = cardsWord(next.length) + ': ' + parts.join(', ');
-    newBtn = choiceButton(fresh.length ? 'Нови ' + word : 'Други форми', desc, () => startCards(next));
+    // and where they are in the schedule: due today, never played, or not due yet
+    const nDue = next.filter(c => srsState(c.key, t) === 'due').length;
+    const nNew = next.filter(c => srsState(c.key, t) === 'new').length;
+    const when = [];
+    if (nDue) when.push(nDue === next.length ? 'всички за преговор' : nDue + '\u00a0за преговор');
+    if (nNew) when.push(nNew === next.length ? 'всички нови' : nNew + '\u00a0нови');
+    if (!when.length) when.push('за упражнение');
+    desc += ' · ' + when.join(', ');
+    const title = fresh.length ? (fresh.some(c => !srs[c.key]) ? 'Нови ' : 'Други ') + word : 'Други форми';
+    newBtn = choiceButton(title, desc, () => startCards(next));
   }
   choices.appendChild(newBtn);
   box.appendChild(choices);

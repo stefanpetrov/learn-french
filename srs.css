@@ -1,1 +1,12 @@
 /* srs: styles (merged into style.css at the end) */
+
+/* "Преговор навреме": today's counts, a calm line above the card */
+.srs-line {
+  margin: 1rem 0 0;
+  font-size: .85rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.srs-line > span:first-child { color: var(--fg); }
+.srs-line:not([hidden]) + #cards > .fc-box { margin-top: .6rem; }
