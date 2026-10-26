@@ -1,8 +1,8 @@
 // Offline support: serve from cache, refresh the cache in the background.
 // Bump VERSION when files are added or removed.
-const VERSION = 'v19';
+const VERSION = 'v20';
 const CACHE = 'learn-french-' + VERSION;
-const CORE = ['./', 'index.html', 'fonts.css', 'fonts/literata-normal-latin.woff2', 'fonts/literata-normal-cyrillic.woff2', 'fonts/literata-italic-latin.woff2', 'fonts/literata-italic-cyrillic.woff2', 'fonts/onest-normal-latin.woff2', 'fonts/onest-normal-cyrillic.woff2', 'style.css', 'analytics.js', 'privacy.html', 'data.js', 'app.js', 'dictation.js', 'speaking.js', 'pairs.js', 'dialogues-data.js', 'dialogues.js', 'explain.js', 'when.js', 'etre-avoir.js', 'listen.js', 'progress.js', 'manifest.webmanifest', 'icon.svg', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
+const CORE = ['./', 'index.html', 'fonts.css', 'fonts/literata-normal-latin.woff2', 'fonts/literata-normal-cyrillic.woff2', 'fonts/literata-italic-latin.woff2', 'fonts/literata-italic-cyrillic.woff2', 'fonts/onest-normal-latin.woff2', 'fonts/onest-normal-cyrillic.woff2', 'style.css', 'srs.css', 'speed.css', 'numbers.css', 'analytics.js', 'privacy.html', 'data.js', 'app.js', 'dictation.js', 'speaking.js', 'pairs.js', 'dialogues-data.js', 'dialogues.js', 'explain.js', 'when.js', 'etre-avoir.js', 'listen.js', 'speed.js', 'numbers.js', 'progress.js', 'manifest.webmanifest', 'icon.svg', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 
 // install with fresh files from the network, not from the browser's HTTP cache, so a new
 // version never starts with an old copy of a file
